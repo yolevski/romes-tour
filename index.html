@@ -598,71 +598,147 @@ document.getElementById('st-fills').textContent='~'+tourFills;
 ═══════════════════════════════ */
 let expenses=[], selStop='all', selCatF=null, formCat='food';
 
-function loadData(){
-  try{const s=localStorage.getItem('romes-exp-v2');if(s)expenses=JSON.parse(s);}catch(e){expenses=[];}
-  if(!expenses.some(e=>e.preset==='gas')){
-    ALL_LEGS.forEach(leg=>{
-      if(!leg.gasCad||leg.gasCad<1)return;
-      expenses.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel — '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 · Yukon 20mpg',preset:'gas'});
-    });
-  }
-  saveData();
-}
-function saveData(){
-  try{localStorage.setItem('romes-exp-v2',JSON.stringify(expenses));}catch(e){}
-  renderBudget();
-}
-/* ── UNDO / SAVE ── */
-let undoSnapshot = null; // single-level undo — stores previous state before last change
+/* ── SUPABASE CONFIG ── */
+const SB_URL = 'https://oqezlcxqbbjbwnhmeeht.supabase.co';
+const SB_KEY = 'sb_publishable_qYcMIIPrdCFNPyRl1kkkDQ_xRDz3Arn';
 
-function saveData(){
-  try{localStorage.setItem('romes-exp-v2',JSON.stringify(expenses));}catch(e){}
+async function sbFetch(path, opts={}){
+  const res = await fetch(SB_URL+'/rest/v1/'+path, {
+    headers:{
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer '+SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer||'',
+    },
+    ...opts
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error(t); }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function loadData(){
+  setStatus('loading');
+  try{
+    const rows = await sbFetch('expenses?order=created_at.asc');
+    expenses = rows.map(r=>({
+      id: r.id,
+      stopId: r.stop_id,
+      cat: r.cat,
+      desc: r.description,
+      amt: parseFloat(r.amt),
+      date: r.date||'',
+      notes: r.notes||'',
+      preset: r.preset||null,
+    }));
+    // Seed gas expenses if none exist yet
+    if(!expenses.some(e=>e.preset==='gas')){
+      const gasRows = [];
+      ALL_LEGS.forEach(leg=>{
+        if(!leg.gasCad||leg.gasCad<1)return;
+        gasRows.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel — '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 · Yukon 20mpg',preset:'gas'});
+      });
+      // Insert all gas rows
+      await sbFetch('expenses', {
+        method:'POST',
+        prefer:'resolution=ignore-duplicates',
+        body: JSON.stringify(gasRows.map(e=>({
+          id:e.id, stop_id:e.stopId, cat:e.cat, description:e.desc,
+          amt:e.amt, date:e.date, notes:e.notes, preset:e.preset
+        })))
+      });
+      expenses = [...gasRows];
+    }
+  } catch(err){
+    console.error('Load error:', err);
+    expenses = [];
+  }
+  setStatus('ready');
   renderBudget();
-  const undoBtn=document.getElementById('undo-btn');
-  if(undoBtn) undoBtn.style.display=undoSnapshot?'inline-flex':'none';
-  flashSaved();
+}
+
+/* ── UNDO / SAVE ── */
+let undoSnapshot = null;
+
+function setStatus(state){
+  const btn = document.getElementById('save-btn');
+  if(!btn) return;
+  if(state==='saving'){ btn.textContent='Saving…'; btn.style.opacity='0.6'; }
+  else if(state==='loading'){ btn.textContent='Loading…'; btn.style.opacity='0.6'; }
+  else { btn.textContent='Save'; btn.style.opacity='1'; }
 }
 
 function flashSaved(){
   const btn = document.getElementById('save-btn');
   if(!btn) return;
-  btn.textContent = '✓ Saved';
-  btn.style.background = 'var(--green)';
-  btn.style.color = '#fff';
-  btn.style.borderColor = 'var(--green)';
+  btn.textContent='✓ Saved';
+  btn.style.background='var(--green)';
+  btn.style.color='#fff';
+  btn.style.borderColor='var(--green)';
+  btn.style.opacity='1';
   clearTimeout(btn._t);
   btn._t = setTimeout(()=>{
-    btn.textContent = 'Save';
-    btn.style.background = '';
-    btn.style.color = '';
-    btn.style.borderColor = '';
+    btn.textContent='Save';
+    btn.style.background='';
+    btn.style.color='';
+    btn.style.borderColor='';
   }, 2000);
 }
 
-function manualSave(){
-  // Force-write current state and confirm visually
+async function pushToSupabase(){
+  setStatus('saving');
   try{
-    localStorage.setItem('romes-exp-v2', JSON.stringify(expenses));
+    // Upsert all expenses
+    await sbFetch('expenses', {
+      method:'POST',
+      prefer:'resolution=merge-duplicates',
+      body: JSON.stringify(expenses.map(e=>({
+        id:e.id, stop_id:e.stopId, cat:e.cat, description:e.desc,
+        amt:e.amt, date:e.date||'', notes:e.notes||'', preset:e.preset||null
+      })))
+    });
     flashSaved();
-  } catch(e){
-    const btn = document.getElementById('save-btn');
-    if(btn){ btn.textContent = '⚠ Error'; btn.style.color = 'var(--red)'; setTimeout(()=>{btn.textContent='Save';btn.style.color='';},2000); }
+  } catch(err){
+    console.error('Save error:', err);
+    const btn=document.getElementById('save-btn');
+    if(btn){ btn.textContent='⚠ Error'; btn.style.color='var(--red)'; setTimeout(()=>{btn.textContent='Save';btn.style.color='';},3000); }
   }
 }
 
-function undoLast(){
-  if(!undoSnapshot) return;
-  expenses = JSON.parse(undoSnapshot);
-  undoSnapshot = null;
-  try{localStorage.setItem('romes-exp-v2', JSON.stringify(expenses));}catch(e){}
-  renderBudget();
-  const undoBtn = document.getElementById('undo-btn');
-  if(undoBtn) undoBtn.style.display = 'none';
+async function deleteFromSupabase(id){
+  try{
+    await sbFetch('expenses?id=eq.'+encodeURIComponent(id), {method:'DELETE'});
+  } catch(err){ console.error('Delete error:', err); }
 }
 
-// Wrap expense mutations to capture undo snapshot before each change
+function saveData(){
+  renderBudget();
+  const undoBtn=document.getElementById('undo-btn');
+  if(undoBtn) undoBtn.style.display=undoSnapshot?'inline-flex':'none';
+  pushToSupabase();
+}
+
+async function manualSave(){
+  await pushToSupabase();
+}
+
+async function undoLast(){
+  if(!undoSnapshot) return;
+  const prev = JSON.parse(undoSnapshot);
+  // Find deleted IDs to remove from Supabase
+  const prevIds = new Set(prev.map(e=>e.id));
+  const currIds = new Set(expenses.map(e=>e.id));
+  for(const id of currIds){ if(!prevIds.has(id)) await deleteFromSupabase(id); }
+  expenses = prev;
+  undoSnapshot = null;
+  const undoBtn=document.getElementById('undo-btn');
+  if(undoBtn) undoBtn.style.display='none';
+  await pushToSupabase();
+  renderBudget();
+}
+
 function mutateExpenses(fn){
-  undoSnapshot = JSON.stringify(expenses); // save state before change
+  undoSnapshot = JSON.stringify(expenses);
   fn();
   saveData();
 }
@@ -814,7 +890,10 @@ function submitExp(){
   closeAddPanel();
 }
 
-function delExp(id){ mutateExpenses(()=>{ expenses=expenses.filter(e=>e.id!==id); }); }
+function delExp(id){ 
+  mutateExpenses(()=>{ expenses=expenses.filter(e=>e.id!==id); });
+  deleteFromSupabase(id);
+}
 
 /* ═══════════════════════════════
    EXPORT
@@ -1167,7 +1246,7 @@ function renderPins(){
 drawStates();
 renderOverlay();
 buildForm();
-loadData();
+(async()=>{ await loadData(); })();
 </script>
 </body>
 </html>
