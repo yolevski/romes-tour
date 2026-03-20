@@ -856,7 +856,7 @@ function renderBudget(){
     filtered=[...filtered].sort((a,b)=>{
       const oa = stopOrder[a.stopId] ?? 500;
       const ob = stopOrder[b.stopId] ?? 500;
-      return ob - oa; // descending: last stop first
+      return oa - ob; // ascending: first stop first
     });
   }
 
