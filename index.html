@@ -846,13 +846,17 @@ function renderBudget(){
   let filtered=expenses;
   if(selStop!=='all')filtered=filtered.filter(e=>e.stopId===selStop);
   if(selCatF)filtered=filtered.filter(e=>e.cat===selCatF);
-  // When viewing all stops, sort by date descending (most recent first, no date at end)
+  // When viewing all stops, sort by tour stop order — most recent stop first
   if(selStop==='all'){
+    // Build a stop order index: post=last, stops by index, pre=first
+    const stopOrder = {};
+    stopOrder['post'] = 1000;
+    STOPS.forEach((s,i)=>{ stopOrder[s.id] = i; });
+    stopOrder['pre'] = -1;
     filtered=[...filtered].sort((a,b)=>{
-      if(!a.date&&!b.date) return 0;
-      if(!a.date) return 1;
-      if(!b.date) return -1;
-      return new Date(b.date)-new Date(a.date);
+      const oa = stopOrder[a.stopId] ?? 500;
+      const ob = stopOrder[b.stopId] ?? 500;
+      return ob - oa; // descending: last stop first
     });
   }
 
