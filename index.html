@@ -646,7 +646,7 @@ let expenses=[], selStop='all', selCatF=null, formCat='food';
 
 /* ── SUPABASE CONFIG ── */
 const SB_URL = 'https://oqezlcxqbbjbwnhmeeht.supabase.co';
-const SB_KEY = 'sb_publishable_qYcMIIPrdCFNPyRl1kkkDQ_xRDz3Arn';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xZXpsY3hxYmJqYnduaG1lZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDY0MDEsImV4cCI6MjA4OTUyMjQwMX0.sMraG05KYE0GORkkff-4y9Xid-yxc3y-o72KCGMLhN0';
 
 async function sbFetch(path, {method='GET', prefer='', body=null}={}){
   const headers = {
@@ -1158,9 +1158,30 @@ function applyTransform(){
   if(!svg) return;
   svg.style.transformOrigin = '0 0';
   svg.style.transform = `translate(${mapTx}px,${mapTy}px) scale(${mapScale})`;
-  // Show km labels only when zoomed in enough
+  // Show km labels when zoomed in enough (accounting for base scale)
   const kmG = document.getElementById('km-g');
-  if(kmG) kmG.style.display = mapScale >= 2.0 ? '' : 'none';
+  if(kmG) kmG.style.display = mapScale >= 1.5 ? '' : 'none';
+}
+
+// Convert a screen-space point (relative to map-wrap) to SVG coordinate space
+function screenToSVG(sx, sy){
+  // SVG is at (mapTx, mapTy) scaled by mapScale
+  return [(sx - mapTx) / mapScale, (sy - mapTy) / mapScale];
+}
+
+// Hit-test: find which stop (if any) is near SVG coords
+const PIN_HIT_RADIUS = 20; // px in SVG space — generous for touch
+function hitTestPins(svgX, svgY){
+  // Check venue stops
+  for(let i=0; i<STOPS.length; i++){
+    const [px,py] = projPt(STOPS[i].lng, STOPS[i].lat);
+    if(Math.hypot(svgX-px, svgY-py) < PIN_HIT_RADIUS) return {type:'stop', idx:i};
+  }
+  // Check Toronto bookend pins
+  const [tx,ty] = projPt(-79.38, 43.65);
+  if(Math.hypot(svgX-(tx-12), svgY-(ty-12)) < 16) return {type:'bookend', leg:PRE};
+  if(Math.hypot(svgX-(tx+12), svgY-(ty-12)) < 16) return {type:'bookend', leg:POST};
+  return null;
 }
 
 function mapZoom(factor, cx, cy){
@@ -1209,20 +1230,23 @@ function initMapInteraction(){
   const wrap = document.getElementById('map-wrap');
   if(!wrap) return;
 
-  // Wheel zoom (desktop) — coords relative to wrap
+  // Wheel zoom (desktop)
   wrap.addEventListener('wheel', e=>{
     e.preventDefault();
     const rect = wrap.getBoundingClientRect();
     mapZoom(e.deltaY<0?1.15:1/1.15, e.clientX-rect.left, e.clientY-rect.top);
   }, {passive:false});
 
-  // Pointer events — drag + pinch, coords relative to wrap
+  // Track whether this was a tap or a drag
+  let tapStartX=0, tapStartY=0, tapMoved=false;
+
   wrap.addEventListener('pointerdown', e=>{
     wrap.setPointerCapture(e.pointerId);
     pointers[e.pointerId]={x:e.clientX,y:e.clientY};
     const keys=Object.keys(pointers);
     if(keys.length===1){
       isDragging=true; lastX=e.clientX; lastY=e.clientY;
+      tapStartX=e.clientX; tapStartY=e.clientY; tapMoved=false;
     } else if(keys.length===2){
       isDragging=false;
       const [a,b]=keys.map(k=>pointers[k]);
@@ -1238,14 +1262,16 @@ function initMapInteraction(){
     pointers[e.pointerId]={x:e.clientX,y:e.clientY};
     const keys=Object.keys(pointers);
     if(keys.length===1 && isDragging){
-      mapTx += e.clientX-lastX;
-      mapTy += e.clientY-lastY;
+      const dx=e.clientX-lastX, dy=e.clientY-lastY;
+      if(Math.abs(dx)>3||Math.abs(dy)>3) tapMoved=true;
+      mapTx += dx; mapTy += dy;
       lastX=e.clientX; lastY=e.clientY;
       applyTransform();
     } else if(keys.length===2){
       const [a,b]=keys.map(k=>pointers[k]);
       const newDist=Math.hypot(b.x-a.x,b.y-a.y);
       if(pinchDist>0){
+        tapMoved=true;
         const factor=newDist/pinchDist;
         pinchDist=newDist;
         const rect=wrap.getBoundingClientRect();
@@ -1257,8 +1283,22 @@ function initMapInteraction(){
   });
 
   wrap.addEventListener('pointerup', e=>{
+    const wasOne = Object.keys(pointers).length===1;
     delete pointers[e.pointerId];
-    if(Object.keys(pointers).length===0) isDragging=false;
+    if(Object.keys(pointers).length===0){
+      isDragging=false;
+      // If it was a tap (no significant movement), do hit test
+      if(wasOne && !tapMoved){
+        const rect=wrap.getBoundingClientRect();
+        const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
+        const [svgX,svgY]=screenToSVG(sx,sy);
+        const hit=hitTestPins(svgX,svgY);
+        if(hit){
+          if(hit.type==='stop') showInfo(hit.idx);
+          else showBookend(hit.leg);
+        }
+      }
+    }
   });
   wrap.addEventListener('pointercancel', e=>{ delete pointers[e.pointerId]; isDragging=false; });
 }
@@ -1327,7 +1367,6 @@ function renderKmLabels(){
     const grp=document.createElementNS(ns,'g');
     grp.setAttribute('transform',`translate(${mx},${my}) rotate(${ang})`);
     grp.style.cursor='pointer';
-    grp.addEventListener('click',()=>showBookend(leg));
     const r=document.createElementNS(ns,'rect');
     r.setAttribute('x','-32');r.setAttribute('y','-15');r.setAttribute('width','64');r.setAttribute('height','28');
     r.setAttribute('rx','5');r.setAttribute('fill','#0a1520');r.setAttribute('stroke','#4a9aff');r.setAttribute('stroke-width','0.7');r.setAttribute('opacity','0.96');
@@ -1351,7 +1390,6 @@ function renderPins(){
     STOPS.forEach((s,i)=>{
       const[x,y]=projPt(s.lng,s.lat),mx=x+11,my=y-9;
       const grp=document.createElementNS(ns,'g');grp.style.cursor='pointer';
-      grp.addEventListener('click',()=>showInfo(i));
       const sh=document.createElementNS(ns,'rect');
       sh.setAttribute('x',mx-3+1);sh.setAttribute('y',my-3+1);sh.setAttribute('width','7');sh.setAttribute('height','7');sh.setAttribute('rx','1');
       sh.setAttribute('fill','#000');sh.setAttribute('opacity','0.35');sh.setAttribute('transform',`rotate(45,${mx+1},${my+1})`);
@@ -1391,7 +1429,6 @@ function renderPins(){
   [[PRE,[-79.38,43.65],-12],[POST,[-79.38,43.65],12]].forEach(([leg,[lon,lat],ox])=>{
     const[x,y]=projPt(lon,lat);
     const grp=document.createElementNS(ns,'g');grp.style.cursor='pointer';
-    grp.addEventListener('click',()=>showBookend(leg));
     const c=document.createElementNS(ns,'circle');
     c.setAttribute('cx',x+ox);c.setAttribute('cy',y-12);c.setAttribute('r','7');
     c.setAttribute('fill','#1a3a6a');c.setAttribute('stroke','#4a9aff');c.setAttribute('stroke-width','1.5');
@@ -1406,7 +1443,6 @@ function renderPins(){
   STOPS.forEach((s,i)=>{
     const[x,y]=projPt(s.lng,s.lat),active=activeStop===i;
     const grp=document.createElementNS(ns,'g');grp.style.cursor='pointer';
-    grp.addEventListener('click',()=>showInfo(i));
     // Invisible large tap target
     const tap=document.createElementNS(ns,'circle');
     tap.setAttribute('cx',x);tap.setAttribute('cy',y);tap.setAttribute('r','18');
