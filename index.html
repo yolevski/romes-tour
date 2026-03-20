@@ -846,6 +846,15 @@ function renderBudget(){
   let filtered=expenses;
   if(selStop!=='all')filtered=filtered.filter(e=>e.stopId===selStop);
   if(selCatF)filtered=filtered.filter(e=>e.cat===selCatF);
+  // When viewing all stops, sort by date (expenses with no date go to end)
+  if(selStop==='all'){
+    filtered=[...filtered].sort((a,b)=>{
+      if(!a.date&&!b.date) return 0;
+      if(!a.date) return 1;
+      if(!b.date) return -1;
+      return new Date(a.date)-new Date(b.date);
+    });
+  }
 
   const stopLabel=selStop==='all'?'ALL EXPENSES':selStop==='pre'?'PRE-TOUR':selStop==='post'?'POST-TOUR':(STOPS.find(s=>s.id===selStop)||{city:selStop}).city.toUpperCase();
   document.getElementById('bmain-title').textContent=stopLabel;
