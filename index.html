@@ -858,15 +858,15 @@ function renderBudget(){
     const cat=CM[exp.cat]||CATS[5];
     const row=document.createElement('div');
     row.className='exp-item';
-    const isGas = exp.preset==='gas';
+    const isAuto = exp.preset==='gas';
     row.innerHTML=`
       <div class="edot" style="background:${cat.color}"></div>
       <div class="einfo">
-        <div class="edesc">${exp.desc}${isGas?'<span class="autobadge">AUTO</span>':''}</div>
+        <div class="edesc">${exp.desc}${isAuto?'<span class="autobadge">AUTO</span>':''}</div>
         <div class="emeta">${cat.label}${exp.date?' · '+exp.date:''}${exp.notes?' · '+exp.notes:''}</div>
       </div>
       <div class="eamt">${fCd(exp.amt)}</div>
-      ${isGas?`<button class="edel" style="opacity:0.6;color:var(--blue);" onclick="openEdit('${exp.id}')" title="Edit">✎</button>`:''}
+      <button class="edel" style="opacity:0.6;color:var(--blue);" onclick="openEdit('${exp.id}')" title="Edit">✎</button>
       <button class="edel" onclick="delExp('${exp.id}')">✕</button>`;
     el.appendChild(row);
   });
