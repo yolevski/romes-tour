@@ -30,20 +30,25 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 /* ── MOBILE: bottom tab nav replaces top tabs ── */
 @media(max-width:640px){
-  .tab-title{display:none;}
-  .tab-left .tab-btn{display:none;}  /* hide top tabs on mobile */
-  .tab-bar{justify-content:flex-end;padding:0 10px;}
+  /* Keep logo visible on mobile */
+  .tab-title{display:block;font-size:12px;letter-spacing:2px;margin-right:8px;}
+  .tab-left .tab-btn{display:none;}
+  .tab-bar{justify-content:space-between;padding:0 10px;}
   .yukon-info{display:none;}
   /* Bottom nav bar */
   .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:58px;background:#0d1520;border-top:1px solid var(--border2);z-index:30;}
   .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;transition:color 0.15s;padding:0;}
   .bn-btn.active{color:var(--red);}
   .bn-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  /* Push stat bar up above bottom nav */
-  .map-stat-bar{margin-bottom:58px;}
-  .table-totals{margin-bottom:58px;}
-  /* Push FAB above bottom nav */
-  .fab{bottom:72px;}
+  /* Push ALL scrollable content above the 58px bottom nav */
+  .map-stat-bar{padding-bottom:66px;}
+  .table-totals{padding-bottom:66px;}
+  .exp-list{padding-bottom:66px;}
+  #table-view .route-table-wrap{padding-bottom:66px;}
+  /* Infobox sits above bottom nav */
+  .infobox{bottom:58px;}
+  /* FAB sits above bottom nav */
+  .fab{bottom:70px;}
 }
 @media(min-width:641px){
   .bottom-nav{display:none;}
@@ -653,9 +658,10 @@ async function sbFetch(path, {method='GET', prefer='', body=null}={}){
     'apikey': SB_KEY,
     'Authorization': 'Bearer '+SB_KEY,
     'Content-Type': 'application/json',
+    'X-Client-Info': 'romes-tour/1.0',
   };
   if(prefer) headers['Prefer'] = prefer;
-  const opts = {method, headers};
+  const opts = {method, headers, mode:'cors'};
   if(body) opts.body = body;
   const res = await fetch(SB_URL+'/rest/v1/'+path, opts);
   if(!res.ok){
@@ -666,11 +672,14 @@ async function sbFetch(path, {method='GET', prefer='', body=null}={}){
   return txt ? JSON.parse(txt) : null;
 }
 
+// localStorage fallback key
+const LS_KEY = 'romes-exp-v2';
+
 async function loadData(){
   setStatus('loading');
   try{
     const rows = await sbFetch('expenses?order=created_at.asc');
-    expenses = rows.map(r=>({
+    expenses = (rows||[]).map(r=>({
       id: r.id,
       stopId: r.stop_id,
       cat: r.cat,
@@ -685,9 +694,8 @@ async function loadData(){
       const gasRows = [];
       ALL_LEGS.forEach(leg=>{
         if(!leg.gasCad||leg.gasCad<1)return;
-        gasRows.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel — '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 · Yukon 20mpg',preset:'gas'});
+        gasRows.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg',preset:'gas'});
       });
-      // Insert all gas rows
       await sbFetch('expenses', {
         method:'POST',
         prefer:'resolution=ignore-duplicates',
@@ -698,12 +706,61 @@ async function loadData(){
       });
       expenses = [...gasRows];
     }
+    // Mirror to localStorage as backup
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(expenses)); }catch(e){}
   } catch(err){
-    console.error('Load error:', err);
-    expenses = [];
+    console.warn('Supabase load failed, trying localStorage:', err.message);
+    // Fall back to localStorage
+    try{
+      const s = localStorage.getItem(LS_KEY);
+      if(s) expenses = JSON.parse(s);
+    }catch(e){ expenses=[]; }
+    // Seed gas if still empty
+    if(!expenses.some(e=>e.preset==='gas')){
+      ALL_LEGS.forEach(leg=>{
+        if(!leg.gasCad||leg.gasCad<1)return;
+        expenses.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg',preset:'gas'});
+      });
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(expenses)); }catch(e){}
+    }
   }
   setStatus('ready');
   renderBudget();
+}
+
+async function pushToSupabase(){
+  setStatus('saving');
+  try{
+    await sbFetch('expenses', {
+      method:'POST',
+      prefer:'resolution=merge-duplicates',
+      body: JSON.stringify(expenses.map(e=>({
+        id:e.id, stop_id:e.stopId, cat:e.cat, description:e.desc,
+        amt:e.amt, date:e.date||'', notes:e.notes||'', preset:e.preset||null
+      })))
+    });
+    // Also mirror to localStorage
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(expenses)); }catch(e){}
+    flashSaved();
+  } catch(err){
+    console.warn('Supabase save failed, using localStorage:', err.message);
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(expenses)); }catch(e){}
+    flashSaved(); // Still confirm saved — it's in localStorage
+  }
+}
+
+async function deleteFromSupabase(id){
+  try{
+    await sbFetch('expenses?id=eq.'+encodeURIComponent(id), {method:'DELETE'});
+  } catch(err){ console.warn('Supabase delete failed:', err.message); }
+  // Always remove from localStorage too
+  try{
+    const s = localStorage.getItem(LS_KEY);
+    if(s){
+      const arr = JSON.parse(s).filter(e=>e.id!==id);
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+    }
+  }catch(e){}
 }
 
 /* ── UNDO / SAVE ── */
@@ -732,32 +789,6 @@ function flashSaved(){
     btn.style.color='';
     btn.style.borderColor='';
   }, 2000);
-}
-
-async function pushToSupabase(){
-  setStatus('saving');
-  try{
-    // Upsert all expenses
-    await sbFetch('expenses', {
-      method:'POST',
-      prefer:'resolution=merge-duplicates',
-      body: JSON.stringify(expenses.map(e=>({
-        id:e.id, stop_id:e.stopId, cat:e.cat, description:e.desc,
-        amt:e.amt, date:e.date||'', notes:e.notes||'', preset:e.preset||null
-      })))
-    });
-    flashSaved();
-  } catch(err){
-    console.error('Save error:', err);
-    const btn=document.getElementById('save-btn');
-    if(btn){ btn.textContent='⚠ Error'; btn.style.color='var(--red)'; setTimeout(()=>{btn.textContent='Save';btn.style.color='';},3000); }
-  }
-}
-
-async function deleteFromSupabase(id){
-  try{
-    await sbFetch('expenses?id=eq.'+encodeURIComponent(id), {method:'DELETE'});
-  } catch(err){ console.error('Delete error:', err); }
 }
 
 function saveData(){
@@ -1458,7 +1489,16 @@ function renderPins(){
     // Number label
     const t=document.createElementNS(ns,'text');t.setAttribute('x',x);t.setAttribute('y',y+0.5);t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
     t.setAttribute('font-family',"'Share Tech Mono',monospace");t.setAttribute('font-size',active?'11':'10');t.setAttribute('fill','#fff');t.setAttribute('font-weight','bold');t.textContent=i+1;
-    grp.appendChild(sh);grp.appendChild(c);grp.appendChild(t);pg.appendChild(grp);
+    // City name label below pin
+    const cityShort = s.city.replace(/,.*$/,''); // just city, no state
+    const lbg=document.createElementNS(ns,'rect');
+    lbg.setAttribute('x',x-28);lbg.setAttribute('y',y+14);lbg.setAttribute('width','56');lbg.setAttribute('height','13');
+    lbg.setAttribute('rx','3');lbg.setAttribute('fill','#0a111c');lbg.setAttribute('opacity','0.78');
+    const lbl=document.createElementNS(ns,'text');
+    lbl.setAttribute('x',x);lbl.setAttribute('y',y+21);lbl.setAttribute('text-anchor','middle');lbl.setAttribute('dominant-baseline','central');
+    lbl.setAttribute('font-family',"'Share Tech Mono',monospace");lbl.setAttribute('font-size','8');lbl.setAttribute('fill','#e8edf2');lbl.setAttribute('font-weight','bold');
+    lbl.textContent=cityShort;
+    grp.appendChild(sh);grp.appendChild(c);grp.appendChild(t);grp.appendChild(lbg);grp.appendChild(lbl);pg.appendChild(grp);
   });
 }
 
