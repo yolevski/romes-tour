@@ -28,7 +28,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .hbtn:hover,.hbtn.on{background:var(--red);color:#fff;border-color:var(--red);}
 .yukon-info{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
 
-/* ── MOBILE: bottom tab nav replaces top tabs ── */
+/* ── MOBILE: bottom tab nav ── */
 @media(max-width:640px){
   /* Keep logo visible on mobile */
   .tab-title{display:block;font-size:12px;letter-spacing:2px;margin-right:8px;}
@@ -40,15 +40,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;transition:color 0.15s;padding:0;}
   .bn-btn.active{color:var(--red);}
   .bn-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  /* Push ALL scrollable content above the 58px bottom nav */
-  .map-stat-bar{padding-bottom:66px;}
-  .table-totals{padding-bottom:66px;}
-  .exp-list{padding-bottom:66px;}
-  #table-view .route-table-wrap{padding-bottom:66px;}
-  /* Infobox sits above bottom nav */
+  /* THE KEY FIX: push the entire shell up so nothing is hidden under the nav */
+  .shell{padding-bottom:58px;}
+  /* Infobox and FAB sit above bottom nav */
   .infobox{bottom:58px;}
-  /* FAB sits above bottom nav */
-  .fab{bottom:70px;}
+  .fab{bottom:76px;}
 }
 @media(min-width:641px){
   .bottom-nav{display:none;}
