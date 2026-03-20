@@ -17,37 +17,32 @@
 html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
 .shell{display:flex;flex-direction:column;width:100vw;height:100vh;}
 
-/* ── TAB BAR ── */
-.tab-bar{display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:50px;flex-shrink:0;border-bottom:0.5px solid var(--border);}
-.tab-left{display:flex;align-items:center;gap:0;}
-.tab-title{font-family:var(--display);font-size:14px;letter-spacing:2px;color:var(--text);margin-right:12px;white-space:nowrap;flex-shrink:0;}
-.tab-btn{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 11px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;height:50px;white-space:nowrap;flex-shrink:0;}
+/* ── TAB BAR — works on all screen sizes ── */
+.tab-bar{display:flex;align-items:center;height:50px;flex-shrink:0;border-bottom:0.5px solid var(--border);padding:0 12px;gap:0;}
+.tab-title{font-family:var(--display);font-size:14px;letter-spacing:2px;color:var(--text);white-space:nowrap;flex-shrink:0;margin-right:4px;}
+.tab-divider{width:1px;height:20px;background:var(--border2);flex-shrink:0;margin:0 8px;}
+.tab-btn{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:0 12px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;height:50px;white-space:nowrap;flex-shrink:0;}
 .tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+.tab-spacer{flex:1;}
 .tab-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .hbtn{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all 0.12s;white-space:nowrap;}
 .hbtn:hover,.hbtn.on{background:var(--red);color:#fff;border-color:var(--red);}
 .yukon-info{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
 
-/* ── MOBILE: bottom tab nav ── */
+/* Mobile: shrink logo, shrink tabs, hide yukon info, hide right controls in map bar */
 @media(max-width:640px){
-  /* Keep logo visible on mobile */
-  .tab-title{display:block;font-size:12px;letter-spacing:2px;margin-right:8px;}
-  .tab-left .tab-btn{display:none;}
-  .tab-bar{justify-content:space-between;padding:0 10px;}
+  .tab-title{font-size:11px;letter-spacing:1px;margin-right:2px;}
+  .tab-btn{font-size:9px;letter-spacing:0.5px;padding:0 9px;}
   .yukon-info{display:none;}
-  /* Bottom nav bar */
-  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:58px;background:#0d1520;border-top:1px solid var(--border2);z-index:30;}
-  .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;transition:color 0.15s;padding:0;}
-  .bn-btn.active{color:var(--red);}
-  .bn-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  /* THE KEY FIX: push the entire shell up so nothing is hidden under the nav */
-  .shell{padding-bottom:58px;}
-  /* Infobox and FAB sit above bottom nav */
-  .infobox{bottom:58px;}
-  .fab{bottom:76px;}
-}
-@media(min-width:641px){
   .bottom-nav{display:none;}
+  /* Hide map filter + export buttons on mobile — keep bar clean */
+  #map-ctrl .hbtn{display:none;}
+  #map-ctrl .yukon-info{display:none;}
+  #budget-ctrl .hbtn:first-child{display:none;} /* hide Export CSV on mobile */
+}
+@media(max-width:400px){
+  .tab-title{font-size:10px;letter-spacing:0;}
+  .tab-btn{font-size:9px;padding:0 7px;}
 }
 
 .view{display:none;flex:1;overflow:hidden;flex-direction:column;}
@@ -248,12 +243,12 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 <div class="shell">
 
 <div class="tab-bar">
-  <div class="tab-left">
-    <span class="tab-title">ROMES // 2026</span>
-    <button class="tab-btn active" onclick="switchTab('map',this)">Route Map</button>
-    <button class="tab-btn" onclick="switchTab('table',this)">Route Table</button>
-    <button class="tab-btn" onclick="switchTab('budget',this)">Budget Tracker</button>
-  </div>
+  <span class="tab-title">ROMES // 2026</span>
+  <div class="tab-divider"></div>
+  <button class="tab-btn active" onclick="switchTab('map',this)">Map</button>
+  <button class="tab-btn" onclick="switchTab('table',this)">Table</button>
+  <button class="tab-btn" onclick="switchTab('budget',this)">Expenses</button>
+  <div class="tab-spacer"></div>
   <div class="tab-right" id="map-ctrl">
     <span class="yukon-info">YUKON · 20MPG · 28GAL · USD/CAD 1.3719</span>
     <button class="hbtn on" onclick="setMapView('all',this)">All</button>
@@ -261,8 +256,8 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <button class="hbtn" onclick="setMapView('marriott',this)">Marriotts</button>
   </div>
   <div class="tab-right" id="budget-ctrl" style="display:none;">
-    <button class="hbtn" onclick="openExport()">Export CSV</button>
-    <button class="hbtn" id="undo-btn" onclick="undoLast()" style="display:none;">↩ Undo</button>
+    <button class="hbtn" onclick="openExport()">CSV</button>
+    <button class="hbtn" id="undo-btn" onclick="undoLast()" style="display:none;">↩</button>
     <button class="hbtn" id="save-btn" onclick="manualSave()">Save</button>
   </div>
 </div>
@@ -413,21 +408,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 </div><!-- shell -->
 
-<!-- Mobile bottom nav -->
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="bn-btn active" id="bn-map" onclick="switchTab('map',this)">
-    <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-    Map
-  </button>
-  <button class="bn-btn" id="bn-table" onclick="switchTab('table',this)">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
-    Table
-  </button>
-  <button class="bn-btn" id="bn-budget" onclick="switchTab('budget',this)">
-    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    Budget
-  </button>
-</nav>
+
 
 <!-- EDIT EXPENSE MODAL -->
 <div class="edit-overlay" id="edit-overlay">
@@ -1001,18 +982,11 @@ function dlCSV(){
    TAB
 ═══════════════════════════════ */
 function switchTab(tab, btn){
-  // Clear all active states
-  document.querySelectorAll('.tab-btn, .bn-btn').forEach(b=>b.classList.remove('active'));
-  // Set active on whichever button was clicked
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  // Always ensure the correct bn-btn is active
-  const bnTarget = document.getElementById('bn-'+tab);
-  if(bnTarget) bnTarget.classList.add('active');
-  // Also set the correct top tab-btn active
-  document.querySelectorAll('.tab-btn').forEach(b=>{
-    if(b.textContent.trim().toLowerCase().replace(/\s+/g,'').includes(tab)) b.classList.add('active');
+  else document.querySelectorAll('.tab-btn').forEach(b=>{
+    if(b.textContent.trim().toLowerCase()===tab) b.classList.add('active');
   });
-  // Switch views
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===tab+'-view'));
   document.getElementById('map-ctrl').style.display=tab==='map'?'flex':'none';
   document.getElementById('budget-ctrl').style.display=tab==='budget'?'flex':'none';
