@@ -41,14 +41,18 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .tab-hbtn{font-size:9px;padding:4px 8px;}
 }
 
-.view{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.view{display:none;flex:1;min-height:0;flex-direction:column;}
 .view.active{display:flex;}
 
 /* ── MAP VIEW ── */
 .map-wrap{position:relative;flex:1;overflow:hidden;min-height:0;background:#111e2e;}
 #map-svg{display:block;width:960px;height:560px;touch-action:none;will-change:transform;}
 .map-stat-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px 10px;flex-shrink:0;border-top:0.5px solid var(--border);}
-@media(max-width:600px){.map-stat-bar{grid-template-columns:repeat(3,1fr);gap:4px;}}
+/* On mobile: 3 columns × 2 rows — give it enough height so second row never clips */
+@media(max-width:600px){
+  .map-stat-bar{grid-template-columns:repeat(3,1fr);gap:4px;padding:5px 8px;}
+  .msc{padding:6px 4px;}
+}
 .msc{background:var(--surface);border-radius:6px;padding:5px 8px;text-align:center;}
 .msn{font-family:var(--display);font-size:13px;color:var(--text);line-height:1.2;}
 .msl{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
@@ -213,10 +217,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .rt-warn{color:#ff8a80;font-size:10px;padding:3px 7px;background:#1a0a0a;border-radius:3px;border-left:2px solid var(--red);display:inline-block;margin-top:3px;line-height:1.4;}
 .rt-bookend{background:rgba(74,154,255,0.07);border-left:2px solid var(--blue);}
 .rt-bookend .rt-num{color:var(--blue);}
-.table-totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 14px;border-top:1px solid var(--border2);flex-shrink:0;}
-@media(max-width:600px){.table-totals{grid-template-columns:repeat(3,1fr);gap:5px;padding:8px 10px;}}
-.tt-card{background:var(--surface);border-radius:7px;padding:8px 12px;text-align:center;}
-.tt-val{font-family:var(--display);font-size:15px;color:var(--text);}
+.table-totals{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px;border-top:1px solid var(--border2);flex-shrink:0;}
+@media(max-width:600px){.table-totals{gap:4px;padding:8px 8px;}}
+.tt-card{background:var(--surface);border-radius:7px;padding:8px 10px;text-align:center;}
+.tt-val{font-family:var(--display);font-size:14px;color:var(--text);}
 .tt-lbl{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
 
 /* ── EDIT / MODALS ── */
@@ -1180,30 +1184,6 @@ function mapZoom(factor, cx, cy){
   applyTransform();
 }
 
-function fitMapToView(){
-  const wrap = document.getElementById('map-wrap');
-  const svg  = document.getElementById('map-svg');
-  if(!wrap||!svg) return;
-  const W = wrap.clientWidth, H = wrap.clientHeight;
-  if(!W||!H) return;
-  // Natural SVG size before transform — getBoundingClientRect gives the rendered size
-  // We need the intrinsic size: the SVG is set width/height 100% so clear transform first
-  svg.style.transform = '';
-  const nW = svg.clientWidth || W;
-  const nH = svg.clientHeight || H;
-  // Scale so the 960×560 viewBox fits the container using "meet" logic
-  const s = Math.min(W/960, H/560);
-  mapScale = s;
-  mapTx = (W - 960*s)/2;
-  mapTy = (H - 560*s)/2;
-  applyTransform();
-  // Hide km labels on reset
-  const kmG = document.getElementById('km-g');
-  if(kmG) kmG.style.display = 'none';
-}
-
-mapReset = fitMapToView;
-
 // ── Pointer events for drag + pinch ──
 let isDragging=false, lastX=0, lastY=0;
 let pinchDist=0, pinchMidX=0, pinchMidY=0;
@@ -1466,21 +1446,17 @@ initMapInteraction();
 const kmG = document.getElementById('km-g');
 if(kmG) kmG.style.display = 'none';
 
-// Fit map to fill the SVG container — uses ResizeObserver for reliable sizing
+// Fit map to fill the SVG container
 function fitMapToView(){
   const wrap = document.getElementById('map-wrap');
   if(!wrap) return;
   const W = wrap.clientWidth, H = wrap.clientHeight;
   if(!W||!H) return;
-  // Use "meet" logic but push toward filling available space
-  const scaleW = W / 960;
-  const scaleH = H / 560;
-  // On portrait mobile scaleH is larger — use it to fill height,
-  // allowing slight horizontal crop. On landscape use width.
+  const scaleW = W / 960, scaleH = H / 560;
   const isPortrait = H > W;
   const s = isPortrait
-    ? Math.min(scaleH * 0.92, scaleW * 1.1)   // portrait: fill height
-    : Math.min(scaleW, scaleH);                 // landscape: fit width
+    ? Math.min(scaleH * 0.92, scaleW * 1.1)
+    : Math.min(scaleW, scaleH);
   mapScale = s;
   mapTx = (W - 960*s)/2;
   mapTy = (H - 560*s)/2;
@@ -1488,12 +1464,16 @@ function fitMapToView(){
   const kmGEl = document.getElementById('km-g');
   if(kmGEl) kmGEl.style.display = 'none';
 }
+mapReset = fitMapToView;
 
 if(window.ResizeObserver){
   new ResizeObserver(()=>fitMapToView()).observe(document.getElementById('map-wrap'));
 }
 window.addEventListener('resize', fitMapToView);
+// Multiple fallbacks for iOS Safari which delays layout
 fitMapToView();
+setTimeout(fitMapToView, 100);
+setTimeout(fitMapToView, 400);
 
 (async()=>{ await loadData(); })();
 </script>
