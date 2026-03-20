@@ -17,32 +17,28 @@
 html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
 .shell{display:flex;flex-direction:column;width:100vw;height:100vh;}
 
-/* ── TAB BAR — works on all screen sizes ── */
-.tab-bar{display:flex;align-items:center;height:50px;flex-shrink:0;border-bottom:0.5px solid var(--border);padding:0 12px;gap:0;}
-.tab-title{font-family:var(--display);font-size:14px;letter-spacing:2px;color:var(--text);white-space:nowrap;flex-shrink:0;margin-right:4px;}
-.tab-divider{width:1px;height:20px;background:var(--border2);flex-shrink:0;margin:0 8px;}
-.tab-btn{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:0 12px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;height:50px;white-space:nowrap;flex-shrink:0;}
-.tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+/* ── TAB BAR ── */
+.tab-bar{display:flex;align-items:center;height:50px;flex-shrink:0;border-bottom:0.5px solid var(--border);padding:0 14px;gap:8px;}
+.tab-title{font-family:var(--display);font-size:14px;letter-spacing:2px;color:var(--text);white-space:nowrap;flex-shrink:0;}
 .tab-spacer{flex:1;}
 .tab-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+/* Tab buttons — same style as hbtn but with active state */
+.tab-hbtn{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:5px 12px;border:0.5px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all 0.12s;white-space:nowrap;}
+.tab-hbtn:hover{border-color:var(--text2);color:var(--text);}
+.tab-hbtn.active{background:var(--red);color:#fff;border-color:var(--red);}
+/* Other header buttons */
 .hbtn{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all 0.12s;white-space:nowrap;}
 .hbtn:hover,.hbtn.on{background:var(--red);color:#fff;border-color:var(--red);}
 .yukon-info{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
-
-/* Mobile: shrink logo, shrink tabs, hide yukon info, hide right controls in map bar */
 @media(max-width:640px){
-  .tab-title{font-size:11px;letter-spacing:1px;margin-right:2px;}
-  .tab-btn{font-size:9px;letter-spacing:0.5px;padding:0 9px;}
+  .tab-title{font-size:12px;letter-spacing:1px;}
+  .tab-hbtn{font-size:9px;padding:5px 10px;}
   .yukon-info{display:none;}
   .bottom-nav{display:none;}
-  /* Hide map filter + export buttons on mobile — keep bar clean */
-  #map-ctrl .hbtn{display:none;}
-  #map-ctrl .yukon-info{display:none;}
-  #budget-ctrl .hbtn:first-child{display:none;} /* hide Export CSV on mobile */
 }
-@media(max-width:400px){
+@media(max-width:380px){
   .tab-title{font-size:10px;letter-spacing:0;}
-  .tab-btn{font-size:9px;padding:0 7px;}
+  .tab-hbtn{font-size:9px;padding:4px 8px;}
 }
 
 .view{display:none;flex:1;overflow:hidden;flex-direction:column;}
@@ -52,7 +48,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .map-wrap{position:relative;flex:1;overflow:hidden;min-height:0;background:#111e2e;}
 #map-svg{display:block;width:960px;height:560px;touch-action:none;will-change:transform;}
 .map-stat-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px 10px;flex-shrink:0;border-top:0.5px solid var(--border);}
-@media(max-width:500px){.map-stat-bar{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:600px){.map-stat-bar{grid-template-columns:repeat(3,1fr);gap:4px;}}
 .msc{background:var(--surface);border-radius:6px;padding:5px 8px;text-align:center;}
 .msn{font-family:var(--display);font-size:13px;color:var(--text);line-height:1.2;}
 .msl{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
@@ -217,8 +213,9 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .rt-warn{color:#ff8a80;font-size:10px;padding:3px 7px;background:#1a0a0a;border-radius:3px;border-left:2px solid var(--red);display:inline-block;margin-top:3px;line-height:1.4;}
 .rt-bookend{background:rgba(74,154,255,0.07);border-left:2px solid var(--blue);}
 .rt-bookend .rt-num{color:var(--blue);}
-.table-totals{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border2);flex-shrink:0;flex-wrap:wrap;}
-.tt-card{background:var(--surface);border-radius:7px;padding:8px 12px;text-align:center;flex:1;min-width:90px;}
+.table-totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 14px;border-top:1px solid var(--border2);flex-shrink:0;}
+@media(max-width:600px){.table-totals{grid-template-columns:repeat(3,1fr);gap:5px;padding:8px 10px;}}
+.tt-card{background:var(--surface);border-radius:7px;padding:8px 12px;text-align:center;}
 .tt-val{font-family:var(--display);font-size:15px;color:var(--text);}
 .tt-lbl{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
 
@@ -244,19 +241,13 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 <div class="tab-bar">
   <span class="tab-title">ROMES // 2026</span>
-  <div class="tab-divider"></div>
-  <button class="tab-btn active" onclick="switchTab('map',this)">Map</button>
-  <button class="tab-btn" onclick="switchTab('table',this)">Table</button>
-  <button class="tab-btn" onclick="switchTab('budget',this)">Expenses</button>
   <div class="tab-spacer"></div>
-  <div class="tab-right" id="map-ctrl">
-    <span class="yukon-info">YUKON · 20MPG · 28GAL · USD/CAD 1.3719</span>
-    <button class="hbtn on" onclick="setMapView('all',this)">All</button>
-    <button class="hbtn" onclick="setMapView('venues',this)">Venues</button>
-    <button class="hbtn" onclick="setMapView('marriott',this)">Marriotts</button>
+  <div class="tab-right">
+    <button class="tab-hbtn active" onclick="switchTab('map',this)">Map</button>
+    <button class="tab-hbtn" onclick="switchTab('table',this)">Table</button>
+    <button class="tab-hbtn" onclick="switchTab('budget',this)">Expenses</button>
   </div>
   <div class="tab-right" id="budget-ctrl" style="display:none;">
-    <button class="hbtn" onclick="openExport()">CSV</button>
     <button class="hbtn" id="undo-btn" onclick="undoLast()" style="display:none;">↩</button>
     <button class="hbtn" id="save-btn" onclick="manualSave()">Save</button>
   </div>
@@ -982,13 +973,12 @@ function dlCSV(){
    TAB
 ═══════════════════════════════ */
 function switchTab(tab, btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-hbtn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  else document.querySelectorAll('.tab-btn').forEach(b=>{
+  else document.querySelectorAll('.tab-hbtn').forEach(b=>{
     if(b.textContent.trim().toLowerCase()===tab) b.classList.add('active');
   });
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===tab+'-view'));
-  document.getElementById('map-ctrl').style.display=tab==='map'?'flex':'none';
   document.getElementById('budget-ctrl').style.display=tab==='budget'?'flex':'none';
   if(tab==='table') renderTable();
 }
@@ -1079,14 +1069,6 @@ function saveEdit(){
    MAP OVERLAY
 ═══════════════════════════════ */
 let activeStop=-1, showVenues=true, showMarriotts=true;
-
-function setMapView(mode,btn){
-  document.querySelectorAll('#map-ctrl .hbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  showVenues=mode==='all'||mode==='venues';
-  showMarriotts=mode==='all'||mode==='marriott';
-  renderOverlay();
-}
 function closeInfo(){activeStop=-1;document.getElementById('infobox').className='infobox';renderPins();}
 
 function showInfo(i){
