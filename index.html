@@ -846,13 +846,13 @@ function renderBudget(){
   let filtered=expenses;
   if(selStop!=='all')filtered=filtered.filter(e=>e.stopId===selStop);
   if(selCatF)filtered=filtered.filter(e=>e.cat===selCatF);
-  // When viewing all stops, sort by date (expenses with no date go to end)
+  // When viewing all stops, sort by date descending (most recent first, no date at end)
   if(selStop==='all'){
     filtered=[...filtered].sort((a,b)=>{
       if(!a.date&&!b.date) return 0;
       if(!a.date) return 1;
       if(!b.date) return -1;
-      return new Date(a.date)-new Date(b.date);
+      return new Date(b.date)-new Date(a.date);
     });
   }
 
