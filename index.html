@@ -14,6 +14,7 @@
   --mono:'Share Tech Mono',monospace;--display:'Black Ops One',serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+button,a,[onclick]{touch-action:manipulation;}
 html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
 /* Use dynamic viewport height on mobile to account for iOS Safari toolbar */
 @supports(height:100dvh){
@@ -288,10 +289,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
       </g>
     </svg>
     <!-- Zoom controls -->
-    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
-      <button onclick="mapZoom(1.35)" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);">+</button>
-      <button onclick="mapZoom(1/1.35)" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);">−</button>
-      <button onclick="mapReset()" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#7a9ab5;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-family:'Share Tech Mono',monospace;letter-spacing:0px;">FIT</button>
+    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;touch-action:manipulation;" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
+      <button onclick="mapZoom(1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);touch-action:manipulation;">+</button>
+      <button onclick="mapZoom(1/1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);touch-action:manipulation;">−</button>
+      <button onclick="mapReset()" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#7a9ab5;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-family:'Share Tech Mono',monospace;touch-action:manipulation;">FIT</button>
     </div>
 
     <div class="infobox" id="infobox" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
