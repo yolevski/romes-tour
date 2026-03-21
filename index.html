@@ -288,13 +288,13 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
       </g>
     </svg>
     <!-- Zoom controls -->
-    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;">
+    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
       <button onclick="mapZoom(1.35)" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);">+</button>
       <button onclick="mapZoom(1/1.35)" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);">−</button>
       <button onclick="mapReset()" style="width:40px;height:40px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#7a9ab5;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-family:'Share Tech Mono',monospace;letter-spacing:0px;">FIT</button>
     </div>
 
-    <div class="infobox" id="infobox">
+    <div class="infobox" id="infobox" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
       <div class="ib-hdr">
         <div><div class="ib-tag" id="ib-tag"></div><div class="ib-num" id="ib-num"></div></div>
         <button class="ib-x" onclick="closeInfo()">✕</button>
@@ -412,10 +412,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 <div class="edit-overlay" id="edit-overlay">
   <div class="edit-modal">
     <button class="edit-close" onclick="closeEdit()">✕</button>
-    <div class="edit-modal-title">Edit Gas Expense</div>
+    <div class="edit-modal-title">Edit Expense</div>
     <input type="hidden" id="edit-exp-id"/>
     <div class="edit-row"><label class="edit-label">Description</label><input class="edit-input" id="edit-desc" type="text"/></div>
     <div class="edit-row"><label class="edit-label">Amount (CAD $)</label><input class="edit-input" id="edit-amt" type="number" min="0" step="0.01"/></div>
+    <div class="edit-row"><label class="edit-label">Tour Stop</label><select class="edit-input" id="edit-stop"></select></div>
     <div class="edit-row"><label class="edit-label">Notes</label><input class="edit-input" id="edit-notes" type="text" placeholder="e.g. Actual receipt amount"/></div>
     <button class="edit-save" onclick="saveEdit()">Save Changes</button>
   </div>
@@ -1069,6 +1070,20 @@ function openEdit(id){
   document.getElementById('edit-desc').value = exp.desc;
   document.getElementById('edit-amt').value = exp.amt.toFixed(2);
   document.getElementById('edit-notes').value = exp.notes||'';
+  // Populate stop dropdown
+  const sel = document.getElementById('edit-stop');
+  sel.innerHTML = '';
+  const stopOptions = [
+    {id:'pre',   label:'Pre-Tour (Toronto → Dallas)'},
+    ...STOPS.map(s=>({id:s.id, label:s.city+' — '+s.date})),
+    {id:'post',  label:'Post-Tour (New York → Toronto)'},
+  ];
+  stopOptions.forEach(o=>{
+    const opt=document.createElement('option');
+    opt.value=o.id; opt.textContent=o.label;
+    if(o.id===exp.stopId) opt.selected=true;
+    sel.appendChild(opt);
+  });
   document.getElementById('edit-overlay').classList.add('open');
 }
 function closeEdit(){ document.getElementById('edit-overlay').classList.remove('open'); }
@@ -1077,10 +1092,11 @@ function saveEdit(){
   const desc  = document.getElementById('edit-desc').value.trim();
   const amt   = parseFloat(document.getElementById('edit-amt').value);
   const notes = document.getElementById('edit-notes').value.trim();
+  const stopId = document.getElementById('edit-stop').value;
   if(!desc||!amt||amt<=0) return;
   mutateExpenses(()=>{
     const exp = expenses.find(e=>e.id===id);
-    if(exp){ exp.desc=desc; exp.amt=amt; exp.notes=notes; }
+    if(exp){ exp.desc=desc; exp.amt=amt; exp.notes=notes; exp.stopId=stopId; }
   });
   closeEdit();
 }
@@ -1163,7 +1179,7 @@ function applyTransform(){
   svg.style.transform = `translate(${mapTx}px,${mapTy}px) scale(${mapScale})`;
   // Show km labels when zoomed in enough (accounting for base scale)
   const kmG = document.getElementById('km-g');
-  if(kmG) kmG.style.display = mapScale >= 1.5 ? '' : 'none';
+  if(kmG) kmG.style.display = mapScale >= 0.8 ? '' : 'none';
 }
 
 // Convert a screen-space point (relative to map-wrap) to SVG coordinate space
@@ -1266,8 +1282,8 @@ function initMapInteraction(){
     delete pointers[e.pointerId];
     if(Object.keys(pointers).length===0){
       isDragging=false;
-      // If it was a tap (no significant movement), do hit test
-      if(wasOne && !tapMoved){
+      // Only hit-test if it was a tap (no movement) AND not on a button/interactive element
+      if(wasOne && !tapMoved && !e.target.closest('button,a,[onclick]')){
         const rect=wrap.getBoundingClientRect();
         const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
         const [svgX,svgY]=screenToSVG(sx,sy);
@@ -1313,51 +1329,81 @@ function renderKmLabels(){
   g.innerHTML='';
   if(!showVenues)return;
   const ns='http://www.w3.org/2000/svg';
-  STOPS.forEach((s,i)=>{
-    if(i===0)return;
-    const p1=projPt(STOPS[i-1].lng,STOPS[i-1].lat),p2=projPt(s.lng,s.lat);
-    const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
-    let ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0])*180/Math.PI;
-    if(ang>90)ang-=180;if(ang<-90)ang+=180;
-    const km=s.km>=1000?(s.km/1000).toFixed(1)+'k km':s.km+' km';
+
+  function makeLabel(p1, p2, line1, line2, line3, isBookend){
+    const mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
+    // Offset perpendicular to the route line so labels don't sit on the dashes
+    const dx=p2[0]-p1[0], dy=p2[1]-p1[1];
+    const len=Math.hypot(dx,dy)||1;
+    const px=-dy/len, py=dx/len; // perpendicular unit vector
+    const off=14; // offset distance in SVG units
+    const lx=mx+px*off, ly=my+py*off;
+
+    const W=68, H=line3?34:24, rx=5;
     const grp=document.createElementNS(ns,'g');
-    grp.setAttribute('transform',`translate(${mx},${my}) rotate(${ang})`);
+    grp.setAttribute('transform',`translate(${lx},${ly})`);
+
+    // Background card
     const r=document.createElementNS(ns,'rect');
-    r.setAttribute('x','-32');r.setAttribute('y','-15');r.setAttribute('width','64');r.setAttribute('height','28');
-    r.setAttribute('rx','5');r.setAttribute('fill','#0d1520');r.setAttribute('stroke','#ff3a2e');r.setAttribute('stroke-width','0.7');r.setAttribute('opacity','0.96');
+    r.setAttribute('x',-W/2);r.setAttribute('y',-H/2);
+    r.setAttribute('width',W);r.setAttribute('height',H);r.setAttribute('rx',rx);
+    r.setAttribute('fill','#0d1520');
+    r.setAttribute('stroke', isBookend?'#4a9aff':'#ff3a2e');
+    r.setAttribute('stroke-width','0.6');r.setAttribute('opacity','0.95');
+    grp.appendChild(r);
+
+    // Line 1 — distance + time
     const t1=document.createElementNS(ns,'text');
-    t1.setAttribute('x','0');t1.setAttribute('y','-3');t1.setAttribute('text-anchor','middle');t1.setAttribute('dominant-baseline','central');
-    t1.setAttribute('font-family',"'Share Tech Mono',monospace");t1.setAttribute('font-size','9');t1.setAttribute('fill','#ff8a80');t1.setAttribute('font-weight','bold');
-    t1.textContent=`${km} · ${fT(s.driveMin)}`;
-    const t2=document.createElementNS(ns,'text');
-    t2.setAttribute('x','0');t2.setAttribute('y','9');t2.setAttribute('text-anchor','middle');t2.setAttribute('dominant-baseline','central');
-    t2.setAttribute('font-family',"'Share Tech Mono',monospace");t2.setAttribute('font-size','9');t2.setAttribute('fill','#4dbb7a');
-    t2.textContent=fC(s.gasCad);
-    grp.appendChild(r);grp.appendChild(t1);grp.appendChild(t2);
+    t1.setAttribute('x','0');t1.setAttribute('y', line3?-10:line2?-6:0);
+    t1.setAttribute('text-anchor','middle');t1.setAttribute('dominant-baseline','central');
+    t1.setAttribute('font-family',"'Share Tech Mono',monospace");
+    t1.setAttribute('font-size','8.5');t1.setAttribute('font-weight','bold');
+    t1.setAttribute('fill', isBookend?'#a0c8ff':'#ff8a80');
+    t1.textContent=line1;
+    grp.appendChild(t1);
+
+    // Line 2 — time (if separate) or gas cost
+    if(line2){
+      const t2=document.createElementNS(ns,'text');
+      t2.setAttribute('x','0');t2.setAttribute('y', line3?1:6);
+      t2.setAttribute('text-anchor','middle');t2.setAttribute('dominant-baseline','central');
+      t2.setAttribute('font-family',"'Share Tech Mono',monospace");
+      t2.setAttribute('font-size','8');t2.setAttribute('fill','#4a9aff');
+      t2.textContent=line2;
+      grp.appendChild(t2);
+    }
+
+    // Line 3 — gas cost
+    if(line3){
+      const t3=document.createElementNS(ns,'text');
+      t3.setAttribute('x','0');t3.setAttribute('y','12');
+      t3.setAttribute('text-anchor','middle');t3.setAttribute('dominant-baseline','central');
+      t3.setAttribute('font-family',"'Share Tech Mono',monospace");
+      t3.setAttribute('font-size','8');t3.setAttribute('fill','#4dbb7a');
+      t3.textContent=line3;
+      grp.appendChild(t3);
+    }
+
+    return grp;
+  }
+
+  // Tour stop legs
+  STOPS.forEach((s,i)=>{
+    if(i===0||!s.km)return;
+    const p1=projPt(STOPS[i-1].lng,STOPS[i-1].lat);
+    const p2=projPt(s.lng,s.lat);
+    const km=s.km>=1000?(s.km/1000).toFixed(1)+'k km':s.km+' km';
+    const grp=makeLabel(p1,p2, km, fT(s.driveMin), fC(s.gasCad), false);
     g.appendChild(grp);
   });
 
-  // Bookend labels
+  // Bookend legs
   [[PRE,[-79.38,43.65],[-96.80,32.78]],[POST,[-73.99,40.74],[-79.38,43.65]]].forEach(([leg,from,to])=>{
     const p1=projPt(from[0],from[1]),p2=projPt(to[0],to[1]);
-    const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
-    let ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0])*180/Math.PI;
-    if(ang>90)ang-=180;if(ang<-90)ang+=180;
-    const grp=document.createElementNS(ns,'g');
-    grp.setAttribute('transform',`translate(${mx},${my}) rotate(${ang})`);
+    const km=leg.km>=1000?(leg.km/1000).toFixed(1)+'k km':leg.km+' km';
+    const grp=makeLabel(p1,p2, km, fT(leg.driveMin), fC(leg.gasCad), true);
     grp.style.cursor='pointer';
-    const r=document.createElementNS(ns,'rect');
-    r.setAttribute('x','-32');r.setAttribute('y','-15');r.setAttribute('width','64');r.setAttribute('height','28');
-    r.setAttribute('rx','5');r.setAttribute('fill','#0a1520');r.setAttribute('stroke','#4a9aff');r.setAttribute('stroke-width','0.7');r.setAttribute('opacity','0.96');
-    const t1=document.createElementNS(ns,'text');
-    t1.setAttribute('x','0');t1.setAttribute('y','-3');t1.setAttribute('text-anchor','middle');t1.setAttribute('dominant-baseline','central');
-    t1.setAttribute('font-family',"'Share Tech Mono',monospace");t1.setAttribute('font-size','9');t1.setAttribute('fill','#a0c8ff');t1.setAttribute('font-weight','bold');
-    t1.textContent=`${leg.km.toLocaleString()} km · ${fT(leg.driveMin)}`;
-    const t2=document.createElementNS(ns,'text');
-    t2.setAttribute('x','0');t2.setAttribute('y','9');t2.setAttribute('text-anchor','middle');t2.setAttribute('dominant-baseline','central');
-    t2.setAttribute('font-family',"'Share Tech Mono',monospace");t2.setAttribute('font-size','9');t2.setAttribute('fill','#4dbb7a');
-    t2.textContent=fC(leg.gasCad);
-    grp.appendChild(r);grp.appendChild(t1);grp.appendChild(t2);
+    grp.addEventListener('click',()=>showBookend(leg));
     g.appendChild(grp);
   });
 }
@@ -1458,10 +1504,6 @@ renderOverlay();
 buildForm();
 initMapInteraction();
 
-// Hide km labels at default zoom — appear when user zooms in
-const kmG = document.getElementById('km-g');
-if(kmG) kmG.style.display = 'none';
-
 // Fit map to fill the SVG container
 function fitMapToView(){
   const wrap = document.getElementById('map-wrap');
@@ -1477,8 +1519,6 @@ function fitMapToView(){
   mapTx = (W - 960*s)/2;
   mapTy = (H - 560*s)/2;
   applyTransform();
-  const kmGEl = document.getElementById('km-g');
-  if(kmGEl) kmGEl.style.display = 'none';
 }
 mapReset = fitMapToView;
 
