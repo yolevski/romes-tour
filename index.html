@@ -321,7 +321,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="msc"><div class="msn">22</div><div class="msl">Stops</div></div>
     <div class="msc"><div class="msn" id="st-km">—</div><div class="msl">Total KM</div></div>
     <div class="msc"><div class="msn" id="st-hrs">—</div><div class="msl">Drive Hrs</div></div>
-    <div class="msc"><div class="msn" id="st-gas">—</div><div class="msl">Gas CAD</div></div>
+    <div class="msc"><div class="msn" id="st-gas">—</div><div class="msl">Gas USD</div></div>
     <div class="msc"><div class="msn" id="st-fills">—</div><div class="msl">Fill-ups</div></div>
   </div>
 </div>
@@ -337,7 +337,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
       </div>
       <div class="tot-block">
         <div class="tot-big" id="grand-tot">C$0</div>
-        <div class="tot-sub">TOTAL · ALL LEGS · CAD</div>
+        <div class="tot-sub">TOTAL · ALL LEGS · USD</div>
         <div class="tot-rows">
           <div class="tot-row"><span class="tot-rl">Gas (pre-loaded)</span><span class="tot-rv" style="color:var(--green);" id="gas-tot-lbl">—</span></div>
           <div class="tot-row"><span class="tot-rl">Other expenses</span><span class="tot-rv" id="other-tot-lbl">—</span></div>
@@ -371,7 +371,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
           <div class="pchips" id="pchips"></div>
         </div>
         <div class="fg"><label class="fl">Description</label><input class="fi" id="f-desc" type="text" placeholder="e.g. Hotel — Dallas night 1"/></div>
-        <div class="fg"><label class="fl">Amount (CAD $)</label><input class="fi" id="f-amt" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="fg"><label class="fl">Amount (USD $)</label><input class="fi" id="f-amt" type="number" min="0" step="0.01" placeholder="0.00"/></div>
         <div class="fg"><label class="fl">Category</label><div class="cat-grid" id="cat-grid"></div></div>
         <div class="fg"><label class="fl">Tour Stop</label><select class="fs" id="f-stop"></select></div>
         <div class="fg"><label class="fl">Date (optional)</label><input class="fi" id="f-date" type="date"/></div>
@@ -416,7 +416,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="edit-modal-title">Edit Expense</div>
     <input type="hidden" id="edit-exp-id"/>
     <div class="edit-row"><label class="edit-label">Description</label><input class="edit-input" id="edit-desc" type="text"/></div>
-    <div class="edit-row"><label class="edit-label">Amount (CAD $)</label><input class="edit-input" id="edit-amt" type="number" min="0" step="0.01"/></div>
+    <div class="edit-row"><label class="edit-label">Amount (USD $)</label><input class="edit-input" id="edit-amt" type="number" min="0" step="0.01"/></div>
     <div class="edit-row"><label class="edit-label">Tour Stop</label><select class="edit-input" id="edit-stop"></select></div>
     <div class="edit-row"><label class="edit-label">Notes</label><input class="edit-input" id="edit-notes" type="text" placeholder="e.g. Actual receipt amount"/></div>
     <button class="edit-save" onclick="saveEdit()">Save Changes</button>
@@ -539,22 +539,26 @@ function drawStates(){
    CONSTANTS & DATA
 ═══════════════════════════════ */
 const MPG=20,TANK=28,KM_MI=1.60934,L_GAL=3.78541,USD_CAD=1.3719;
+// Ontario gas converted to USD/gal for consistent calculation
+const GAS_ON_USD = 1.75/USD_CAD*L_GAL; // C$1.75/L → USD/gal
 const L100=(100/MPG)/KM_MI*L_GAL;
 const TANK_KM=Math.round(TANK*KM_MI*MPG);
 const GAS={TX:3.54,NM:3.79,AZ:4.02,CA:5.34,OR:4.29,WA:4.72,ID:3.60,UT:3.71,CO:3.83,IL:3.94,MO:3.09,OH:3.71,MI:3.87,MA:3.62,NY:3.73,ON:1.75};
 function uL(s){return GAS[s]/L_GAL;}
-function legCad(km,f,t){
-  if(f==='ON'||t==='ON'){const a=f==='ON'?GAS.ON:uL(f)*USD_CAD,b=t==='ON'?GAS.ON:uL(t)*USD_CAD;return km*L100/100*(a+b)/2;}
-  return km*L100/100*(uL(f)+uL(t))/2*USD_CAD;
+function legUSD(km,f,t){
+  // All GAS values are USD/gal already except Ontario which is CAD/L
+  const priceUSD = s => s==='ON' ? GAS_ON_USD : GAS[s];
+  const a=priceUSD(f), b=priceUSD(t);
+  // Convert USD/gal to USD/L, then multiply by litres used
+  return km*L100/100*(a/L_GAL+b/L_GAL)/2;
 }
 function fills(km){return Math.ceil(km/TANK_KM);}
 function fT(m){if(!m)return'—';const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`;}
-function fC(v){return'C$'+Math.round(Math.abs(v)).toLocaleString();}
-function fCd(v){return'C$'+v.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fC(v){return'$'+Math.round(Math.abs(v)).toLocaleString();}
+function fCd(v){return'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fLocalGas(s){
-  if(s.state==='ON')return`C$${GAS.ON.toFixed(2)}/L (Ontario)`;
-  const c=GAS[s.state]/L_GAL*USD_CAD;
-  return`US$${GAS[s.state].toFixed(2)}/gal (${s.state}) ≈ C$${c.toFixed(2)}/L`;
+  if(s.state==='ON')return`$${(GAS_ON_USD/L_GAL).toFixed(2)}/gal (Ontario, converted)`;
+  return`$${GAS[s.state].toFixed(2)}/gal (${s.state})`;
 }
 
 const CATS=[
@@ -582,8 +586,8 @@ const PRESETS=[
 
 const PRE={id:'pre',label:'Pre-Tour',city:'Toronto → Dallas',date:'~Mar 21',km:2284,driveMin:1283,fromState:'ON',toState:'TX',warn:'2 overnight stops. Border at Windsor/Detroit.'};
 const POST={id:'post',label:'Post-Tour',city:'New York → Toronto',date:'Apr 22+',km:789,driveMin:570,fromState:'NY',toState:'ON',warn:'~9.5 hrs including border at Niagara/Buffalo.'};
-PRE.gasCad=legCad(PRE.km,'ON','TX'); PRE.fills=fills(PRE.km);
-POST.gasCad=legCad(POST.km,'NY','ON'); POST.fills=fills(POST.km);
+PRE.gasUSD=legUSD(PRE.km,'ON','TX'); PRE.fills=fills(PRE.km);
+POST.gasUSD=legUSD(POST.km,'NY','ON'); POST.fills=fills(POST.km);
 
 const STOPS=[
   {id:'s0', city:"Dallas, TX",         date:"Mar 24",venue:"Dallas (TBA)",              lat:32.78, lng:-96.80, marriott:"Dallas Marriott Downtown",        state:"TX",km:0,   driveMin:0,  warn:null},
@@ -608,10 +612,10 @@ const STOPS=[
   {id:'s19',city:"Worcester, MA",      date:"Apr 21",venue:"Palladium",                  lat:42.27, lng:-71.80, marriott:"Courtyard Marriott Worcester",     state:"MA",km:748, driveMin:455,warn:"Re-enters US ~7.5 hrs with border."},
   {id:'s20',city:"New York, NY",       date:"Apr 22",venue:"Gramercy Theatre",           lat:40.74, lng:-73.99, marriott:"New York Marriott Marquis",        state:"NY",km:287, driveMin:180,warn:null},
 ];
-STOPS.forEach((s,i)=>{s.gasCad=i===0?0:legCad(s.km,STOPS[i-1].state,s.state);s.fills=fills(s.km);});
+STOPS.forEach((s,i)=>{s.gasUSD=i===0?0:legUSD(s.km,STOPS[i-1].state,s.state);s.fills=fills(s.km);});
 
 const ALL_LEGS=[PRE,...STOPS,POST];
-const tourGas=ALL_LEGS.reduce((a,s)=>a+(s.gasCad||0),0);
+const tourGas=ALL_LEGS.reduce((a,s)=>a+(s.gasUSD||0),0);
 const tourKm=ALL_LEGS.reduce((a,s)=>a+(s.km||0),0);
 const tourMin=ALL_LEGS.reduce((a,s)=>a+(s.driveMin||0),0);
 const tourFills=ALL_LEGS.reduce((a,s)=>a+(s.fills||0),0);
@@ -667,11 +671,11 @@ async function loadData(){
       preset: r.preset||null,
     }));
     // Seed gas expenses if none exist yet
-    if(!expenses.some(e=>e.preset==='gas')){
+    if(!expenses.some(e=>e.preset==='gas-usd')){
       const gasRows = [];
       ALL_LEGS.forEach(leg=>{
-        if(!leg.gasCad||leg.gasCad<1)return;
-        gasRows.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg',preset:'gas'});
+        if(!leg.gasUSD||leg.gasUSD<1)return;
+        gasRows.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasUSD*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg \u00b7 USD',preset:'gas-usd'});
       });
       await sbFetch('expenses', {
         method:'POST',
@@ -693,10 +697,10 @@ async function loadData(){
       if(s) expenses = JSON.parse(s);
     }catch(e){ expenses=[]; }
     // Seed gas if still empty
-    if(!expenses.some(e=>e.preset==='gas')){
+    if(!expenses.some(e=>e.preset==='gas-usd')){
       ALL_LEGS.forEach(leg=>{
-        if(!leg.gasCad||leg.gasCad<1)return;
-        expenses.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasCad*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg',preset:'gas'});
+        if(!leg.gasUSD||leg.gasUSD<1)return;
+        expenses.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasUSD*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg \u00b7 USD',preset:'gas-usd'});
       });
       try{ localStorage.setItem(LS_KEY, JSON.stringify(expenses)); }catch(e){}
     }
@@ -873,7 +877,7 @@ function renderBudget(){
     const cat=CM[exp.cat]||CATS[5];
     const row=document.createElement('div');
     row.className='exp-item';
-    const isAuto = exp.preset==='gas';
+    const isAuto = exp.preset==='gas-usd';
     row.innerHTML=`
       <div class="edot" style="background:${cat.color}"></div>
       <div class="einfo">
@@ -981,7 +985,7 @@ function openExport(){
 }
 function closeExport(){document.getElementById('exp-modal').classList.remove('open');}
 function dlCSV(){
-  let csv='Stop,Category,Description,Amount CAD,Date,Notes\n';
+  let csv='Stop,Category,Description,Amount USD,Date,Notes\n';
   expenses.forEach(e=>{
     const leg=ALL_LEGS.find(l=>l.id===e.stopId)||{city:e.stopId};
     csv+=`"${leg.city||e.stopId}","${CM[e.cat]?.label||e.cat}","${e.desc}",${e.amt.toFixed(2)},"${e.date}","${e.notes}"\n`;
@@ -1022,7 +1026,7 @@ function renderTable(){
     const tr = document.createElement('tr');
     if(row.type==='bookend'){
       const leg=row.leg;
-      cumKm+=leg.km; cumMin+=leg.driveMin; cumGas+=leg.gasCad; cumFills+=leg.fills;
+      cumKm+=leg.km; cumMin+=leg.driveMin; cumGas+=leg.gasUSD; cumFills+=leg.fills;
       tr.className='rt-bookend';
       tr.innerHTML=`
         <td class="rt-num">${row.num}</td>
@@ -1031,12 +1035,12 @@ function renderTable(){
         <td><div class="rt-sub">Driving leg</div></td>
         <td class="rt-km">${leg.km.toLocaleString()} km</td>
         <td class="rt-time">${fT(leg.driveMin)}</td>
-        <td class="rt-gas">${fC(leg.gasCad)}</td>
+        <td class="rt-gas">${fC(leg.gasUSD)}</td>
         <td class="rt-fills">~${leg.fills}</td>
         <td><span class="rt-warn">⚠ ${leg.warn}</span></td>`;
     } else {
       const s=row.stop;
-      cumKm+=s.km; cumMin+=s.driveMin; cumGas+=s.gasCad; cumFills+=s.fills;
+      cumKm+=s.km; cumMin+=s.driveMin; cumGas+=s.gasUSD; cumFills+=s.fills;
       const warnCell = s.warn ? `<span class="rt-warn">⚠ ${s.warn}</span>` : '<span style="color:var(--text3);font-size:11px;">—</span>';
       tr.innerHTML=`
         <td class="rt-num">${row.num}</td>
@@ -1045,7 +1049,7 @@ function renderTable(){
         <td><div class="rt-sub" style="color:var(--text2);">${s.marriott}</div></td>
         <td class="rt-km">${s.km>0?s.km.toLocaleString()+' km':'START'}</td>
         <td class="rt-time">${s.driveMin>0?fT(s.driveMin):'—'}</td>
-        <td class="rt-gas">${s.gasCad>0?fC(s.gasCad):'—'}</td>
+        <td class="rt-gas">${s.gasUSD>0?fC(s.gasUSD):'—'}</td>
         <td class="rt-fills">${s.fills>0?'~'+s.fills:'—'}</td>
         <td>${warnCell}</td>`;
     }
@@ -1058,7 +1062,7 @@ function renderTable(){
     <div class="tt-card"><div class="tt-val">22</div><div class="tt-lbl">Tour Stops</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumKm/1000)}K km</div><div class="tt-lbl">Total Distance</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumMin/60)}h</div><div class="tt-lbl">Total Drive Time</div></div>
-    <div class="tt-card"><div class="tt-val">${fC(cumGas)}</div><div class="tt-lbl">Total Gas CAD</div></div>
+    <div class="tt-card"><div class="tt-val">${fC(cumGas)}</div><div class="tt-lbl">Total Gas USD</div></div>
     <div class="tt-card"><div class="tt-val">~${cumFills}</div><div class="tt-lbl">Total Fill-ups</div></div>
     <div class="tt-card"><div class="tt-val">${fCd(expenses.reduce((a,e)=>a+e.amt,0))}</div><div class="tt-lbl">Total Budget</div></div>`;
 }
@@ -1126,14 +1130,14 @@ function showInfo(i){
   document.getElementById('ib-gv').textContent=fLocalGas(s);
   const cumKm=STOPS.slice(0,i+1).reduce((a,x)=>a+x.km,0);
   const cumMin=STOPS.slice(0,i+1).reduce((a,x)=>a+x.driveMin,0);
-  const cumGas=STOPS.slice(0,i+1).reduce((a,x)=>a+x.gasCad,0);
+  const cumGas=STOPS.slice(0,i+1).reduce((a,x)=>a+x.gasUSD,0);
   document.getElementById('ib-tot').textContent=`${cumKm.toLocaleString()} km · ${fT(cumMin)} · ${fC(cumGas)} gas`;
   const we=document.getElementById('ib-w');
   if(s.warn){we.textContent='⚠ '+s.warn;we.style.display='block';}else we.style.display='none';
   function lcard(label,ls,ds){
     if(label==='START')return`<div class="lc"><div class="ld">STATUS</div><div class="lk" style="color:var(--red);font-size:12px;">TOUR START</div></div>`;
     if(label==='END')return`<div class="lc" style="display:flex;align-items:center;justify-content:center;"><div style="text-align:center"><div class="ld">STATUS</div><div class="lk" style="color:var(--red);font-size:11px;">FINAL</div></div></div>`;
-    return`<div class="lc"><div class="ld">${label}</div><div class="lk">${ls.km.toLocaleString()} km</div><div class="lt">${fT(ls.driveMin)}</div><div class="lg">${fC(ls.gasCad)}</div><div class="lf">~${ls.fills} fill-up${ls.fills!==1?'s':''}</div><div class="lci">${ds.city.split(',')[0]}</div></div>`;
+    return`<div class="lc"><div class="ld">${label}</div><div class="lk">${ls.km.toLocaleString()} km</div><div class="lt">${fT(ls.driveMin)}</div><div class="lg">${fC(ls.gasUSD)}</div><div class="lf">~${ls.fills} fill-up${ls.fills!==1?'s':''}</div><div class="lci">${ds.city.split(',')[0]}</div></div>`;
   }
   const ll=document.getElementById('ib-legs');
   if(i===0)ll.innerHTML=lcard('START')+lcard('TO NEXT',next,next);
@@ -1158,7 +1162,7 @@ function showBookend(leg){
     <div class="bk-row"><span class="bk-l">Distance</span><span class="bk-v">${leg.km.toLocaleString()} km</span></div>
     <div class="bk-row"><span class="bk-l">Drive time</span><span class="bk-v">${fT(leg.driveMin)}</span></div>
     <div class="bk-row"><span class="bk-l">Fill-ups</span><span class="bk-v">~${leg.fills}</span></div>
-    <div class="bk-row"><span class="bk-l">Gas est.</span><span class="bk-v g">${fC(leg.gasCad)}</span></div>
+    <div class="bk-row"><span class="bk-l">Gas est.</span><span class="bk-v g">${fC(leg.gasUSD)}</span></div>
     <div style="margin-top:7px;font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.6;">⚠ ${leg.warn}</div>
   </div>`;
   document.getElementById('ib-tot').textContent='';
@@ -1394,7 +1398,7 @@ function renderKmLabels(){
     const p1=projPt(STOPS[i-1].lng,STOPS[i-1].lat);
     const p2=projPt(s.lng,s.lat);
     const km=s.km>=1000?(s.km/1000).toFixed(1)+'k km':s.km+' km';
-    const grp=makeLabel(p1,p2, km, fT(s.driveMin), fC(s.gasCad), false);
+    const grp=makeLabel(p1,p2, km, fT(s.driveMin), fC(s.gasUSD), false);
     g.appendChild(grp);
   });
 
@@ -1402,7 +1406,7 @@ function renderKmLabels(){
   [[PRE,[-79.38,43.65],[-96.80,32.78]],[POST,[-73.99,40.74],[-79.38,43.65]]].forEach(([leg,from,to])=>{
     const p1=projPt(from[0],from[1]),p2=projPt(to[0],to[1]);
     const km=leg.km>=1000?(leg.km/1000).toFixed(1)+'k km':leg.km+' km';
-    const grp=makeLabel(p1,p2, km, fT(leg.driveMin), fC(leg.gasCad), true);
+    const grp=makeLabel(p1,p2, km, fT(leg.driveMin), fC(leg.gasUSD), true);
     grp.style.cursor='pointer';
     grp.addEventListener('click',()=>showBookend(leg));
     g.appendChild(grp);
