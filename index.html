@@ -43,6 +43,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .tab-hbtn{font-size:9px;padding:5px 10px;}
   .yukon-info{display:none;}
   .bottom-nav{display:none;}
+  .export-btn{display:none;}
 }
 @media(max-width:380px){
   .tab-title{font-size:10px;letter-spacing:0;}
@@ -256,7 +257,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <button class="tab-hbtn" onclick="switchTab('budget',this)">Expenses</button>
   </div>
   <div class="tab-right" id="budget-ctrl" style="display:none;">
-    <button class="hbtn" onclick="openExport()">Export CSV</button>
+    <button class="hbtn export-btn" onclick="openExport()">Export CSV</button>
     <button class="hbtn" id="undo-btn" onclick="undoLast()" style="display:none;">↩</button>
     <button class="hbtn" id="save-btn" onclick="manualSave()">Save</button>
   </div>
@@ -319,12 +320,12 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     </div>
   </div>
   <div class="map-stat-bar">
+    <div class="msc"><div class="msn" id="st-total">—</div><div class="msl">Total Expenses</div></div>
     <div class="msc"><div class="msn">22</div><div class="msl">Stops</div></div>
     <div class="msc"><div class="msn" id="st-km">—</div><div class="msl">Total KM</div></div>
     <div class="msc"><div class="msn" id="st-hrs">—</div><div class="msl">Drive Hrs</div></div>
     <div class="msc"><div class="msn" id="st-gas">—</div><div class="msl">Gas USD</div></div>
     <div class="msc"><div class="msn" id="st-fills">—</div><div class="msl">Fill-ups</div></div>
-    <div class="msc"><div class="msn" id="st-total">—</div><div class="msl">Total Expenses</div></div>
   </div>
 </div>
 
@@ -1119,12 +1120,12 @@ function renderTable(){
   const liveFills = expenses.filter(e=>e.cat==='gas').length;
   const liveTotal = expenses.reduce((a,e)=>a+e.amt,0);
   tot.innerHTML = `
+    <div class="tt-card"><div class="tt-val">${fCd(liveTotal)}</div><div class="tt-lbl">Total Expenses</div></div>
     <div class="tt-card"><div class="tt-val">22</div><div class="tt-lbl">Tour Stops</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumKm/1000)}K km</div><div class="tt-lbl">Total Distance</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumMin/60)}h</div><div class="tt-lbl">Total Drive Time</div></div>
     <div class="tt-card"><div class="tt-val">${fC(liveGas||cumGas)}</div><div class="tt-lbl">Total Gas USD</div></div>
-    <div class="tt-card"><div class="tt-val">${liveFills||'~'+cumFills}</div><div class="tt-lbl">Total Fill-ups</div></div>
-    <div class="tt-card"><div class="tt-val">${fCd(liveTotal)}</div><div class="tt-lbl">Total Expenses</div></div>`;
+    <div class="tt-card"><div class="tt-val">${liveFills||'~'+cumFills}</div><div class="tt-lbl">Total Fill-ups</div></div>`;
 }
 
 /* ── EDIT GAS EXPENSE ── */
