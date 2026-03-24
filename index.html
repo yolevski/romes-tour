@@ -340,10 +340,6 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
       <div class="tot-block">
         <div class="tot-big" id="grand-tot">C$0</div>
         <div class="tot-sub">TOTAL · ALL LEGS · USD</div>
-        <div class="tot-rows">
-          <div class="tot-row"><span class="tot-rl">Gas (pre-loaded)</span><span class="tot-rv" style="color:var(--green);" id="gas-tot-lbl">—</span></div>
-          <div class="tot-row"><span class="tot-rl">Other expenses</span><span class="tot-rv" id="other-tot-lbl">—</span></div>
-        </div>
       </div>
       <div class="cat-list" id="cat-list"></div>
       <div class="cbar-wrap"><div class="cbar" id="cbar"></div></div>
@@ -824,9 +820,9 @@ function renderBudget(){
   const tot=expenses.reduce((a,e)=>a+e.amt,0);
   const gasTot=expenses.filter(e=>e.cat==='gas').reduce((a,e)=>a+e.amt,0);
   document.getElementById('grand-tot').textContent=fC(tot);
-  document.getElementById('gas-tot-lbl').textContent=fC(gasTot);
-  document.getElementById('other-tot-lbl').textContent=fC(tot-gasTot);
   updateStatBar();
+  // Re-render table if it's currently visible so gas column stays live
+  if(document.getElementById('table-view')?.classList.contains('active')) renderTable();
 
   // sidebar cats
   const cl=document.getElementById('cat-list');
@@ -1067,6 +1063,12 @@ function renderTable(){
   const tbody = document.getElementById('route-tbody');
   tbody.innerHTML = '';
 
+  // Build live gas expense totals per stop from inputted expenses
+  const gasPerStop = {};
+  expenses.filter(e=>e.cat==='gas').forEach(e=>{
+    gasPerStop[e.stopId] = (gasPerStop[e.stopId]||0) + e.amt;
+  });
+
   const allLegs = [
     {type:'bookend', leg:PRE,  num:'▶', label:'Pre-Tour Drive'},
     ...STOPS.map((s,i)=>({type:'stop', stop:s, num:i+1})),
@@ -1079,7 +1081,8 @@ function renderTable(){
     const tr = document.createElement('tr');
     if(row.type==='bookend'){
       const leg=row.leg;
-      cumKm+=leg.km; cumMin+=leg.driveMin; cumGas+=leg.gasUSD; cumFills+=leg.fills;
+      const legGas = gasPerStop[leg.id] ?? leg.gasUSD;
+      cumKm+=leg.km; cumMin+=leg.driveMin; cumGas+=legGas; cumFills+=leg.fills;
       tr.className='rt-bookend';
       tr.innerHTML=`
         <td class="rt-num">${row.num}</td>
@@ -1088,12 +1091,13 @@ function renderTable(){
         <td><div class="rt-sub">Driving leg</div></td>
         <td class="rt-km">${leg.km.toLocaleString()} km</td>
         <td class="rt-time">${fT(leg.driveMin)}</td>
-        <td class="rt-gas">${fC(leg.gasUSD)}</td>
+        <td class="rt-gas">${fC(legGas)}</td>
         <td class="rt-fills">~${leg.fills}</td>
         <td><span class="rt-warn">⚠ ${leg.warn}</span></td>`;
     } else {
       const s=row.stop;
-      cumKm+=s.km; cumMin+=s.driveMin; cumGas+=s.gasUSD; cumFills+=s.fills;
+      const stopGas = gasPerStop[s.id] ?? (s.gasUSD||0);
+      cumKm+=s.km; cumMin+=s.driveMin; cumGas+=stopGas; cumFills+=s.fills;
       const warnCell = s.warn ? `<span class="rt-warn">⚠ ${s.warn}</span>` : '<span style="color:var(--text3);font-size:11px;">—</span>';
       tr.innerHTML=`
         <td class="rt-num">${row.num}</td>
@@ -1102,7 +1106,7 @@ function renderTable(){
         <td><div class="rt-sub" style="color:var(--text2);">${s.marriott}</div></td>
         <td class="rt-km">${s.km>0?s.km.toLocaleString()+' km':'START'}</td>
         <td class="rt-time">${s.driveMin>0?fT(s.driveMin):'—'}</td>
-        <td class="rt-gas">${s.gasUSD>0?fC(s.gasUSD):'—'}</td>
+        <td class="rt-gas">${stopGas>0?fC(stopGas):'—'}</td>
         <td class="rt-fills">${s.fills>0?'~'+s.fills:'—'}</td>
         <td>${warnCell}</td>`;
     }
