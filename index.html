@@ -256,6 +256,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <button class="tab-hbtn" onclick="switchTab('budget',this)">Expenses</button>
   </div>
   <div class="tab-right" id="budget-ctrl" style="display:none;">
+    <button class="hbtn" onclick="openExport()">Export CSV</button>
     <button class="hbtn" id="undo-btn" onclick="undoLast()" style="display:none;">↩</button>
     <button class="hbtn" id="save-btn" onclick="manualSave()">Save</button>
   </div>
@@ -323,6 +324,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="msc"><div class="msn" id="st-hrs">—</div><div class="msl">Drive Hrs</div></div>
     <div class="msc"><div class="msn" id="st-gas">—</div><div class="msl">Gas USD</div></div>
     <div class="msc"><div class="msn" id="st-fills">—</div><div class="msl">Fill-ups</div></div>
+    <div class="msc"><div class="msn" id="st-total">—</div><div class="msl">Total Expenses</div></div>
   </div>
 </div>
 
@@ -622,8 +624,19 @@ const tourFills=ALL_LEGS.reduce((a,s)=>a+(s.fills||0),0);
 
 document.getElementById('st-km').textContent=Math.round(tourKm/1000)+'K';
 document.getElementById('st-hrs').textContent=Math.round(tourMin/60)+'h';
-document.getElementById('st-gas').textContent=fC(tourGas);
-document.getElementById('st-fills').textContent='~'+tourFills;
+
+// updateStatBar — called on load and whenever expenses change
+function updateStatBar(){
+  const gasAmt = expenses.filter(e=>e.cat==='gas').reduce((a,e)=>a+e.amt,0);
+  const gasCnt = expenses.filter(e=>e.cat==='gas').length;
+  const totalAmt = expenses.reduce((a,e)=>a+e.amt,0);
+  const stGas = document.getElementById('st-gas');
+  const stFills = document.getElementById('st-fills');
+  const stTotal = document.getElementById('st-total');
+  if(stGas) stGas.textContent = gasAmt>0 ? fC(gasAmt) : fC(tourGas);
+  if(stFills) stFills.textContent = gasCnt>0 ? gasCnt : '~'+tourFills;
+  if(stTotal) stTotal.textContent = totalAmt>0 ? fC(totalAmt) : '—';
+}
 
 /* ═══════════════════════════════
    STORAGE & EXPENSES
@@ -813,6 +826,7 @@ function renderBudget(){
   document.getElementById('grand-tot').textContent=fC(tot);
   document.getElementById('gas-tot-lbl').textContent=fC(gasTot);
   document.getElementById('other-tot-lbl').textContent=fC(tot-gasTot);
+  updateStatBar();
 
   // sidebar cats
   const cl=document.getElementById('cat-list');
@@ -985,14 +999,53 @@ function openExport(){
 }
 function closeExport(){document.getElementById('exp-modal').classList.remove('open');}
 function dlCSV(){
-  let csv='Stop,Category,Description,Amount USD,Date,Notes\n';
-  expenses.forEach(e=>{
-    const leg=ALL_LEGS.find(l=>l.id===e.stopId)||{city:e.stopId};
-    csv+=`"${leg.city||e.stopId}","${CM[e.cat]?.label||e.cat}","${e.desc}",${e.amt.toFixed(2)},"${e.date}","${e.notes}"\n`;
+  // Group by category, sorted by stop order within each category
+  const stopOrder = {};
+  stopOrder['pre'] = -1;
+  STOPS.forEach((s,i)=>{ stopOrder[s.id]=i; });
+  stopOrder['post'] = 100;
+
+  const sorted = [...expenses].sort((a,b)=>{
+    // Primary: category name
+    const ca=(CM[a.cat]?.label||a.cat).toLowerCase();
+    const cb=(CM[b.cat]?.label||b.cat).toLowerCase();
+    if(ca!==cb) return ca<cb?-1:1;
+    // Secondary: stop order
+    return (stopOrder[a.stopId]??50)-(stopOrder[b.stopId]??50);
   });
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download='romes-tour-budget-2026.csv';a.click();
+
+  let csv = 'Category,Stop / Leg,Date,Description,Amount USD,Notes\n';
+
+  // Group rows with blank category header rows
+  let lastCat = null;
+  const catTotals = {};
+  sorted.forEach(e=>{
+    const cat = CM[e.cat]?.label || e.cat;
+    if(cat !== lastCat){
+      if(lastCat!==null) csv += '\n'; // blank line between categories
+      csv += `"--- ${cat.toUpperCase()} ---",,,,, \n`;
+      lastCat = cat;
+    }
+    const leg = ALL_LEGS.find(l=>l.id===e.stopId)||{city:e.stopId};
+    const city = leg.city||e.stopId||'';
+    csv += `"${cat}","${city}","${e.date||''}","${e.desc}",${e.amt.toFixed(2)},"${e.notes||''}"\n`;
+    catTotals[cat] = (catTotals[cat]||0)+e.amt;
+  });
+
+  // Category subtotals
+  csv += '\n"--- CATEGORY TOTALS ---",,,,, \n';
+  Object.entries(catTotals).forEach(([cat,tot])=>{
+    csv += `"${cat}",,,"Subtotal",${tot.toFixed(2)},\n`;
+  });
+
+  // Grand total
+  const grand = expenses.reduce((a,e)=>a+e.amt,0);
+  csv += `\n"GRAND TOTAL",,,"All Categories",${grand.toFixed(2)},\n`;
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'romes-tour-expenses-2026.csv';
+  a.click();
 }
 
 /* ═══════════════════════════════
@@ -1058,13 +1111,16 @@ function renderTable(){
 
   // Totals bar
   const tot = document.getElementById('table-totals');
+  const liveGas = expenses.filter(e=>e.cat==='gas').reduce((a,e)=>a+e.amt,0);
+  const liveFills = expenses.filter(e=>e.cat==='gas').length;
+  const liveTotal = expenses.reduce((a,e)=>a+e.amt,0);
   tot.innerHTML = `
     <div class="tt-card"><div class="tt-val">22</div><div class="tt-lbl">Tour Stops</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumKm/1000)}K km</div><div class="tt-lbl">Total Distance</div></div>
     <div class="tt-card"><div class="tt-val">${Math.round(cumMin/60)}h</div><div class="tt-lbl">Total Drive Time</div></div>
-    <div class="tt-card"><div class="tt-val">${fC(cumGas)}</div><div class="tt-lbl">Total Gas USD</div></div>
-    <div class="tt-card"><div class="tt-val">~${cumFills}</div><div class="tt-lbl">Total Fill-ups</div></div>
-    <div class="tt-card"><div class="tt-val">${fCd(expenses.reduce((a,e)=>a+e.amt,0))}</div><div class="tt-lbl">Total Budget</div></div>`;
+    <div class="tt-card"><div class="tt-val">${fC(liveGas||cumGas)}</div><div class="tt-lbl">Total Gas USD</div></div>
+    <div class="tt-card"><div class="tt-val">${liveFills||'~'+cumFills}</div><div class="tt-lbl">Total Fill-ups</div></div>
+    <div class="tt-card"><div class="tt-val">${fCd(liveTotal)}</div><div class="tt-lbl">Total Expenses</div></div>`;
 }
 
 /* ── EDIT GAS EXPENSE ── */
