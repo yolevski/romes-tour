@@ -40,8 +40,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .hbtn:hover,.hbtn.on{background:var(--red);color:#fff;border-color:var(--red);}
 .yukon-info{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
 @media(max-width:640px){
-  .tab-title{font-size:12px;letter-spacing:1px;}
-  .tab-hbtn{font-size:9px;padding:5px 10px;}
+  .tab-bar{padding:0 8px;gap:4px;}
+  .tab-title{font-size:10px;letter-spacing:0.5px;}
+  .tab-hbtn{font-size:8px;padding:4px 7px;letter-spacing:0.5px;}
+  .tour-btn{font-size:8px!important;padding:3px 5px!important;letter-spacing:0!important;}
+  #tour-switcher{margin-left:4px!important;gap:3px!important;}
   .yukon-info{display:none;}
   .bottom-nav{display:none;}
   .export-btn{display:none;}
@@ -56,7 +59,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 /* ── MAP VIEW ── */
 .map-wrap{position:relative;flex:1;overflow:hidden;min-height:0;background:#111e2e;}
-#map-svg{display:block;width:960px;height:560px;touch-action:none;will-change:transform;}
+#map-svg,#map-svg-uk{display:block;width:960px;height:560px;touch-action:none;will-change:transform;}
 .map-stat-bar{display:flex;gap:4px;padding:6px 10px;flex-shrink:0;border-top:0.5px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .map-stat-bar::-webkit-scrollbar{display:none;}
 .msc{background:var(--surface);border-radius:6px;padding:5px 10px;text-align:center;flex:1;min-width:60px;flex-shrink:0;}
@@ -332,37 +335,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="msc"><div class="msn" id="st-gas">—</div><div class="msl">Gas USD</div></div>
     <div class="msc"><div class="msn" id="st-fills">—</div><div class="msl">Fill-ups</div></div>
   </div>
-
-<!-- UK MAP VIEW -->
-<div class="view" id="map-view-uk" style="display:none;flex-direction:column;">
-  <div class="map-wrap" id="map-wrap-uk">
-    <svg id="map-svg-uk" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg">
-      <rect id="map-bg-uk" width="100%" height="100%" fill="#111e2e"/>
-      <g id="map-root-uk">
-        <g id="uk-regions-g" fill="#1d2f44" stroke="#3a6090" stroke-width="0.8" stroke-linejoin="round"></g>
-        <text x="50" y="30" font-family="'Share Tech Mono',monospace" font-size="10" fill="#1a3550" letter-spacing="2">ATLANTIC</text>
-        <text x="820" y="530" font-family="'Share Tech Mono',monospace" font-size="10" fill="#1a3550" letter-spacing="2">NORTH SEA</text>
-        <polyline id="uk-route-line" fill="none" stroke="#ff3a2e" stroke-width="2" stroke-dasharray="8,4"/>
-        <g id="uk-km-g"></g>
-        <g id="uk-v-pins"></g>
-      </g>
-    </svg>
-    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;touch-action:manipulation;" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
-      <button onclick="ukMapZoom(1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;">+</button>
-      <button onclick="ukMapZoom(1/1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;">−</button>
-      <button onclick="fitUKMapToView()" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#7a9ab5;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;touch-action:manipulation;">FIT</button>
-    </div>
-    <div class="infobox" id="infobox-uk" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()"></div>
-  </div>
-  <div class="map-stat-bar" id="uk-stat-bar">
-    <div class="msc"><div class="msn" id="uk-st-total">—</div><div class="msl">Total Expenses</div></div>
-    <div class="msc"><div class="msn">8</div><div class="msl">Stops</div></div>
-    <div class="msc"><div class="msn" id="uk-st-km">—</div><div class="msl">Total KM</div></div>
-    <div class="msc"><div class="msn" id="uk-st-hrs">—</div><div class="msl">Drive Hrs</div></div>
-    <div class="msc"><div class="msn" id="uk-st-gas">—</div><div class="msl">Gas GBP</div></div>
-  </div>
 </div>
-
 
 <!-- BUDGET -->
 <div class="view" id="budget-view">
@@ -375,7 +348,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
       </div>
       <div class="tot-block">
         <div class="tot-big" id="grand-tot">C$0</div>
-        <div class="tot-sub">TOTAL · ALL LEGS · USD</div>
+        <div class="tot-sub">TOTAL · ALL STOPS</div>
       </div>
       <div class="cat-list" id="cat-list"></div>
       <div class="cbar-wrap"><div class="cbar" id="cbar"></div></div>
@@ -405,7 +378,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
           <div class="pchips" id="pchips"></div>
         </div>
         <div class="fg"><label class="fl">Description</label><input class="fi" id="f-desc" type="text" placeholder="e.g. Hotel — Dallas night 1"/></div>
-        <div class="fg"><label class="fl">Amount (USD $)</label><input class="fi" id="f-amt" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="fg"><label class="fl">Amount</label><input class="fi" id="f-amt" type="number" min="0" step="0.01" placeholder="0.00"/></div>
         <div class="fg"><label class="fl">Category</label><div class="cat-grid" id="cat-grid"></div></div>
         <div class="fg"><label class="fl">Tour Stop</label><select class="fs" id="f-stop"></select></div>
         <div class="fg"><label class="fl">Date (optional)</label><input class="fi" id="f-date" type="date"/></div>
@@ -439,6 +412,39 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   <div class="table-totals" id="table-totals"></div>
 </div>
 
+<!-- UK MAP VIEW -->
+<div class="view" id="map-view-uk">
+  <div class="map-wrap" id="map-wrap-uk">
+    <svg id="map-svg-uk" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg">
+      <rect id="map-bg-uk" width="100%" height="100%" fill="#111e2e"/>
+      <g id="map-root-uk">
+        <g id="uk-regions-g" fill="#1d2f44" stroke="#3a6090" stroke-width="0.8" stroke-linejoin="round"></g>
+        <text x="50" y="30" font-family="'Share Tech Mono',monospace" font-size="10" fill="#1a3550" letter-spacing="2">ATLANTIC</text>
+        <text x="820" y="530" font-family="'Share Tech Mono',monospace" font-size="10" fill="#1a3550" letter-spacing="2">NORTH SEA</text>
+        <polyline id="uk-route-line" fill="none" stroke="#ff3a2e" stroke-width="2" stroke-dasharray="8,4"/>
+        <g id="uk-km-g"></g>
+        <g id="uk-v-pins"></g>
+      </g>
+    </svg>
+    <div style="position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9;touch-action:manipulation;" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
+      <button onclick="ukMapZoom(1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;">+</button>
+      <button onclick="ukMapZoom(1/1.35)" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#e8edf2;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;">−</button>
+      <button onclick="fitUKMapToView()" style="width:44px;height:44px;border-radius:10px;border:0.5px solid #2a4060;background:#0d1520;color:#7a9ab5;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;touch-action:manipulation;">FIT</button>
+    </div>
+    <div class="infobox" id="infobox-uk" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()"></div>
+  </div>
+  <div class="map-stat-bar" id="uk-stat-bar">
+    <div class="msc"><div class="msn" id="uk-st-total">—</div><div class="msl">Total Expenses</div></div>
+    <div class="msc"><div class="msn">8</div><div class="msl">Stops</div></div>
+    <div class="msc"><div class="msn" id="uk-st-km">—</div><div class="msl">Total KM</div></div>
+    <div class="msc"><div class="msn" id="uk-st-hrs">—</div><div class="msl">Drive Hrs</div></div>
+    <div class="msc"><div class="msn" id="uk-st-gas">—</div><div class="msl">Gas GBP</div></div>
+  </div>
+</div>
+
+
+
+
 </div><!-- shell -->
 
 
@@ -450,7 +456,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="edit-modal-title">Edit Expense</div>
     <input type="hidden" id="edit-exp-id"/>
     <div class="edit-row"><label class="edit-label">Description</label><input class="edit-input" id="edit-desc" type="text"/></div>
-    <div class="edit-row"><label class="edit-label">Amount (USD $)</label><input class="edit-input" id="edit-amt" type="number" min="0" step="0.01"/></div>
+    <div class="edit-row"><label class="edit-label">Amount</label><input class="edit-input" id="edit-amt" type="number" min="0" step="0.01"/></div>
     <div class="edit-row"><label class="edit-label">Tour Stop</label><select class="edit-input" id="edit-stop"></select></div>
     <div class="edit-row"><label class="edit-label">Notes</label><input class="edit-input" id="edit-notes" type="text" placeholder="e.g. Actual receipt amount"/></div>
     <button class="edit-save" onclick="saveEdit()">Save Changes</button>
@@ -588,8 +594,9 @@ function legUSD(km,f,t){
 }
 function fills(km){return Math.ceil(km/TANK_KM);}
 function fT(m){if(!m)return'—';const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`;}
-function fC(v){return'$'+Math.round(Math.abs(v)).toLocaleString();}
-function fCd(v){return'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function curSym(){return activeTour==='uk-2026'?'£':'$';}
+function fC(v){return curSym()+Math.round(Math.abs(v)).toLocaleString();}
+function fCd(v){return curSym()+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fLocalGas(s){
   if(s.state==='ON')return`$${(GAS_ON_USD/L_GAL).toFixed(2)}/gal (Ontario, converted)`;
   return`$${GAS[s.state].toFixed(2)}/gal (${s.state})`;
@@ -649,6 +656,10 @@ const STOPS=[
 STOPS.forEach((s,i)=>{s.gasUSD=i===0?0:legUSD(s.km,STOPS[i-1].state,s.state);s.fills=fills(s.km);});
 
 const ALL_LEGS=[PRE,...STOPS,POST];
+// Tour-aware helpers — return stops/legs for the currently active tour
+function curStops(){ return activeTour==='uk-2026' && typeof UK_STOPS!=='undefined' ? UK_STOPS : STOPS; }
+function curLegs(){ return activeTour==='uk-2026' && typeof UK_STOPS!=='undefined' ? UK_STOPS : ALL_LEGS; }
+function hasBookends(){ return activeTour!=='uk-2026'; }
 const tourGas=ALL_LEGS.reduce((a,s)=>a+(s.gasUSD||0),0);
 const tourKm=ALL_LEGS.reduce((a,s)=>a+(s.km||0),0);
 const tourMin=ALL_LEGS.reduce((a,s)=>a+(s.driveMin||0),0);
@@ -706,6 +717,8 @@ async function sbFetch(path, {method='GET', prefer='', body=null}={}){
 
 async function loadData(){
   setStatus('loading');
+  LS_KEY = 'romes-exp-v2-'+activeTour;
+  expenses = [];
   try{
     const rows = await sbFetch('expenses?tour_id=eq.'+encodeURIComponent(activeTour)+'&order=created_at.asc');
     expenses = (rows||[]).map(r=>({
@@ -727,7 +740,7 @@ async function loadData(){
       alreadySeeded = sf && sf.length > 0;
     } catch(e) {}
 
-    if(!alreadySeeded && !expenses.some(e=>e.preset==='gas-usd')){
+    if(activeTour==='us-2026' && !alreadySeeded && !expenses.some(e=>e.preset==='gas-usd')){
       const gasRows = [];
       ALL_LEGS.forEach(leg=>{
         if(!leg.gasUSD||leg.gasUSD<1)return;
@@ -754,7 +767,7 @@ async function loadData(){
       if(s) expenses = JSON.parse(s);
     }catch(e){ expenses=[]; }
     // Seed gas if still empty
-    if(!expenses.some(e=>e.preset==='gas-usd')){
+    if(activeTour==='us-2026' && !expenses.some(e=>e.preset==='gas-usd')){
       ALL_LEGS.forEach(leg=>{
         if(!leg.gasUSD||leg.gasUSD<1)return;
         expenses.push({id:'g-'+leg.id,stopId:leg.id,cat:'gas',desc:'Fuel \u2014 '+leg.city,amt:Math.round(leg.gasUSD*100)/100,date:'',notes:'AAA Mar 19 2026 \u00b7 Yukon 20mpg \u00b7 USD',preset:'gas-usd'});
@@ -897,7 +910,8 @@ function renderBudget(){
   // stop tabs
   const tabs=document.getElementById('stop-tabs');
   tabs.innerHTML='';
-  [['all','All Stops'],['pre','Pre-Tour'],...STOPS.map((s,i)=>[s.id,`${i+1}. ${s.city.split(',')[0]}`]),['post','Post-Tour']].forEach(([id,lbl])=>{
+  const _bk=hasBookends();
+  [['all','All Stops'],...(_bk?[['pre','Pre-Tour']]:[]),...curStops().map((s,i)=>[s.id,`${i+1}. ${s.city.split(',')[0]}`]),...(_bk?[['post','Post-Tour']]:[])].forEach(([id,lbl])=>{
     const d=document.createElement('div');
     d.className='stab'+(selStop===id?' active':'');
     d.textContent=lbl;
@@ -916,7 +930,7 @@ function renderBudget(){
     // Build a stop order index: post=last, stops by index, pre=first
     const stopOrder = {};
     stopOrder['post'] = 1000;
-    STOPS.forEach((s,i)=>{ stopOrder[s.id] = i; });
+    curStops().forEach((s,i)=>{ stopOrder[s.id] = i; });
     stopOrder['pre'] = -1;
     filtered=[...filtered].sort((a,b)=>{
       const oa = stopOrder[a.stopId] ?? 500;
@@ -967,9 +981,10 @@ function buildForm(){
     grid.appendChild(d);
   });
   const sel=document.getElementById('f-stop');
-  const cur=sel.value||'s0';
+  const cur=sel.value||curStops()[0].id;
   sel.innerHTML='';
-  [['pre','Pre-Tour Drive'],...STOPS.map((s,i)=>[s.id,`${i+1}. ${s.city}`]),['post','Post-Tour Return']].forEach(([v,l])=>{
+  const _bk=hasBookends();
+  [...(_bk?[['pre','Pre-Tour Drive']]:[]),...curStops().map((s,i)=>[s.id,`${i+1}. ${s.city}`]),...(_bk?[['post','Post-Tour Return']]:[])].forEach(([v,l])=>{
     const o=document.createElement('option');
     o.value=v;o.textContent=l;if(v===cur)o.selected=true;sel.appendChild(o);
   });
@@ -1036,7 +1051,7 @@ function openExport(){
   const tot=expenses.reduce((a,e)=>a+e.amt,0);
   let html='<table class="etable"><thead><tr><th>Stop</th><th>Cat</th><th>Description</th><th>Amount</th></tr></thead><tbody>';
   expenses.forEach(e=>{
-    const leg=ALL_LEGS.find(l=>l.id===e.stopId)||{city:e.stopId};
+    const leg=curLegs().find(l=>l.id===e.stopId)||{city:e.stopId};
     html+=`<tr><td>${leg.city||e.stopId}</td><td>${CM[e.cat]?.label||e.cat}</td><td>${e.desc}</td><td>${fCd(e.amt)}</td></tr>`;
   });
   html+=`</tbody></table><div style="font-family:var(--mono);font-size:12px;margin-top:12px;text-align:right;color:var(--green);">TOTAL: ${fCd(tot)}</div>`;
@@ -1071,7 +1086,7 @@ function dlCSV(){
       csv += `"--- ${cat.toUpperCase()} ---",,,,, \n`;
       lastCat = cat;
     }
-    const leg = ALL_LEGS.find(l=>l.id===e.stopId)||{city:e.stopId};
+    const leg = curLegs().find(l=>l.id===e.stopId)||{city:e.stopId};
     const city = leg.city||e.stopId||'';
     csv += `"${cat}","${city}","${e.date||''}","${e.desc}",${e.amt.toFixed(2)},"${e.notes||''}"\n`;
     catTotals[cat] = (catTotals[cat]||0)+e.amt;
@@ -1130,6 +1145,43 @@ function renderTable(){
   expenses.filter(e=>e.cat==='gas').forEach(e=>{
     gasPerStop[e.stopId] = (gasPerStop[e.stopId]||0) + e.amt;
   });
+
+  // ── UK TOUR TABLE ──
+  if(activeTour==='uk-2026'){
+    let cumKm=0, cumMin=0;
+    UK_STOPS.forEach((s,i)=>{
+      const leg = i>0 ? UK_LEGS.find(l=>l.to===s.id) : null;
+      const km = leg?leg.km:0, mins = leg?leg.driveMin:0;
+      cumKm+=km; cumMin+=mins;
+      const stopGas = gasPerStop[s.id]||0;
+      const tr = document.createElement('tr');
+      tr.innerHTML=`
+        <td class="rt-num">${i+1}</td>
+        <td><div class="rt-city">${s.city}</div><div class="rt-sub">${s.venue}</div></td>
+        <td><div class="rt-sub">${s.date}</div></td>
+        <td><div class="rt-sub" style="color:var(--text2);">—</div></td>
+        <td class="rt-km">${km>0?km.toLocaleString()+' km':'START'}</td>
+        <td class="rt-time">${mins>0?fT(mins):'—'}</td>
+        <td class="rt-gas">${stopGas>0?fC(stopGas):'—'}</td>
+        <td class="rt-fills">${expenses.filter(e=>e.cat==='gas'&&e.stopId===s.id).length||'—'}</td>
+        <td><span style="color:var(--text3);font-size:11px;">${s.id==='dublin'?'⛴ Ferry from Holyhead':'—'}</span></td>`;
+      tbody.appendChild(tr);
+    });
+    const tot = document.getElementById('table-totals');
+    const liveGas = expenses.filter(e=>e.cat==='gas').reduce((a,e)=>a+e.amt,0);
+    const liveFills = expenses.filter(e=>e.cat==='gas').length;
+    const liveTotal = expenses.reduce((a,e)=>a+e.amt,0);
+    tot.innerHTML = `
+      <div class="tt-card"><div class="tt-val">${fCd(liveTotal)}</div><div class="tt-lbl">Total Expenses</div></div>
+      <div class="tt-card"><div class="tt-val">${UK_STOPS.length}</div><div class="tt-lbl">Tour Stops</div></div>
+      <div class="tt-card"><div class="tt-val">${(cumKm/1000).toFixed(1)}K km</div><div class="tt-lbl">Total Distance</div></div>
+      <div class="tt-card"><div class="tt-val">${Math.round(cumMin/60)}h</div><div class="tt-lbl">Total Drive Time</div></div>
+      <div class="tt-card"><div class="tt-val">${liveGas>0?fC(liveGas):'—'}</div><div class="tt-lbl">Total Gas</div></div>
+      <div class="tt-card"><div class="tt-val">${liveFills||'—'}</div><div class="tt-lbl">Total Fill-ups</div></div>`;
+    return;
+  }
+
+  // ── US TOUR TABLE ──
 
   const allLegs = [
     {type:'bookend', leg:PRE,  num:'▶', label:'Pre-Tour Drive'},
@@ -1200,11 +1252,11 @@ function openEdit(id){
   // Populate stop dropdown
   const sel = document.getElementById('edit-stop');
   sel.innerHTML = '';
-  const stopOptions = [
+  const stopOptions = hasBookends() ? [
     {id:'pre',   label:'Pre-Tour (Toronto → Dallas)'},
     ...STOPS.map(s=>({id:s.id, label:s.city+' — '+s.date})),
     {id:'post',  label:'Post-Tour (New York → Toronto)'},
-  ];
+  ] : UK_STOPS.map(s=>({id:s.id, label:s.city+' — '+s.date}));
   stopOptions.forEach(o=>{
     const opt=document.createElement('option');
     opt.value=o.id; opt.textContent=o.label;
@@ -1310,8 +1362,8 @@ function setTour(id){
     b.classList.toggle('active', b.dataset.tour===id);
   });
   const isUK = id === 'uk-2026';
-  document.getElementById('map-view').style.display    = isUK ? 'none' : '';
-  document.getElementById('map-view-uk').style.display = isUK ? '' : 'none';
+  selStop='all';
+  buildForm();
   switchTab('map');
   if(isUK){ setTimeout(()=>{ drawUKMap(); fitUKMapToView(); renderUKOverlay(); }, 50); }
   else { setTimeout(()=>{ renderOverlay(); fitMapToView(); }, 50); }
@@ -1658,18 +1710,18 @@ initUKMapInteraction();
 (()=>{
   const isUK = activeTour==='uk-2026';
   document.querySelectorAll('.tour-btn').forEach(b=>b.classList.toggle('active',b.dataset.tour===activeTour));
-  if(isUK){
-    document.getElementById('map-view').style.display='none';
-    document.getElementById('map-view-uk').style.display='';
-  }
+  if(isUK){ switchTab('map'); }
 })();
 
 // Fit map to fill the SVG container
-function fitMapToView(){
+function fitMapToView(attempt){
   const wrap = document.getElementById('map-wrap');
   if(!wrap) return;
   const W = wrap.clientWidth, H = wrap.clientHeight;
-  if(!W||!H) return;
+  if(!W||!H){
+    if((attempt||0)<10) setTimeout(()=>fitMapToView((attempt||0)+1), 60);
+    return;
+  }
   const scaleW = W / 960, scaleH = H / 560;
   const isPortrait = H > W;
   const s = isPortrait
@@ -1752,11 +1804,15 @@ function ukMapZoom(factor){
   applyUKTransform();
 }
 
-function fitUKMapToView(){
+function fitUKMapToView(attempt){
   const wrap=document.getElementById('map-wrap-uk');
   if(!wrap)return;
   const W=wrap.clientWidth, H=wrap.clientHeight;
-  if(!W||!H)return;
+  if(!W||!H){
+    // View may not be laid out yet — retry a few times
+    if((attempt||0)<10) setTimeout(()=>fitUKMapToView((attempt||0)+1), 60);
+    return;
+  }
   const isPortrait=H>W;
   const s=isPortrait?Math.min(H/560*0.92,W/960*1.1):Math.min(W/960,H/560);
   ukScale=s; ukTx=(W-960*s)/2; ukTy=(H-560*s)/2;
